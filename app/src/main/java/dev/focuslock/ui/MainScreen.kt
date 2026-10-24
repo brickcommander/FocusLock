@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -87,23 +88,52 @@ fun MainScreen(
                 },
             )
 
+            if (state.isDeviceOwner && !state.isPinSet) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Hand the phone to your friend",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = "They set the code that unlocks FocusLock. Lock stays disabled until a code exists.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { viewModel.openPinDialog(PinDialogMode.SET) }) {
+                    Text("Set code")
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // Lock / Unlock buttons
             Row {
                 Button(
                     onClick = { viewModel.lock() },
-                    enabled = state.isDeviceOwner && !state.isLocked,
+                    enabled = state.isDeviceOwner && state.isPinSet && !state.isLocked,
                 ) {
                     Text("Lock")
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Button(
-                    onClick = { viewModel.unlock() },
+                    onClick = { viewModel.openPinDialog(PinDialogMode.UNLOCK) },
                     enabled = state.isDeviceOwner && state.isLocked,
                 ) {
                     Text("Unlock")
                 }
+            }
+
+            if (state.isPinSet) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = { viewModel.openPinDialog(PinDialogMode.CHANGE) }) {
+                    Text("Change code")
+                }
+            }
+
+            state.infoMessage?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium)
             }
 
             // Last report
@@ -113,7 +143,7 @@ fun MainScreen(
             }
 
             if (BuildConfig.DEBUG) {
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(32.dp))
                 Button(onClick = onLogBrowserSchema) {
                     Text("DEV: Log browser schema")
                 }
@@ -121,7 +151,7 @@ fun MainScreen(
 
             // DEV: Remove Device Owner
             if (BuildConfig.DEBUG && state.isDeviceOwner) {
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { viewModel.clearDeviceOwner() },
                     colors = ButtonDefaults.buttonColors(
@@ -132,6 +162,38 @@ fun MainScreen(
                 }
             }
         }
+    }
+
+    when (state.pinDialog) {
+        PinDialogMode.SET -> PinDialog(
+            title = "Set unlock code",
+            description = "Friend: enter a 6–12 digit code. Don't share it.",
+            fieldLabels = listOf("New code", "Confirm code"),
+            message = state.pinMessage,
+            isBusy = state.isBusy,
+            confirmLabel = "Save",
+            onSubmit = { viewModel.submitSetPin(it[0], it[1]) },
+            onDismiss = viewModel::dismissPinDialog,
+        )
+        PinDialogMode.UNLOCK -> PinDialog(
+            title = "Enter code to unlock",
+            fieldLabels = listOf("Code"),
+            message = state.pinMessage,
+            isBusy = state.isBusy,
+            confirmLabel = "Unlock",
+            onSubmit = { viewModel.submitUnlock(it[0]) },
+            onDismiss = viewModel::dismissPinDialog,
+        )
+        PinDialogMode.CHANGE -> PinDialog(
+            title = "Change code",
+            fieldLabels = listOf("Current code", "New code", "Confirm new code"),
+            message = state.pinMessage,
+            isBusy = state.isBusy,
+            confirmLabel = "Change",
+            onSubmit = { viewModel.submitChangePin(it[0], it[1], it[2]) },
+            onDismiss = viewModel::dismissPinDialog,
+        )
+        null -> Unit
     }
 }
 

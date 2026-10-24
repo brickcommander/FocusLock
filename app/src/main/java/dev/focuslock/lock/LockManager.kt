@@ -2,15 +2,19 @@ package dev.focuslock.lock
 
 import dev.focuslock.policy.BlockList
 import dev.focuslock.policy.BrowserPolicy
+import dev.focuslock.pin.PinManager
+import dev.focuslock.pin.VerifyResult
 import dev.focuslock.policy.PolicyController
 
 class LockManager(
     private val policy: PolicyController,
     private val store: LockStateStoreContract,
+    private val pinManager: PinManager,
 ) {
 
     fun lock(): LockReport {
         check(policy.isDeviceOwner()) { "Cannot lock: not Device Owner" }
+        check(pinManager.isSet()) { "Cannot lock: no code set" }
 
         val (installed, skipped) = blockTargets().partition { policy.isInstalled(it) }
 
@@ -47,7 +51,19 @@ class LockManager(
         )
     }
 
-    fun unlock(): LockReport {
+    suspend fun unlock(pin: String): UnlockResult =
+        when (val result = pinManager.verify(pin)) {
+            VerifyResult.Ok -> UnlockResult.Unlocked(reverseAll())
+            else -> UnlockResult.Refused(result)
+        }
+
+    /** Debug safety net: reverses every policy without a code, then gives up Device Owner. */
+    fun devRemoveDeviceOwner() {
+        reverseAll()
+        policy.clearDeviceOwner()
+    }
+
+    private fun reverseAll(): LockReport {
         check(policy.isDeviceOwner()) { "Cannot unlock: not Device Owner" }
 
         protectSelf(false)
@@ -79,12 +95,6 @@ class LockManager(
             skippedNotInstalled = skipped,
             failed = failed,
         )
-    }
-
-    /** Debug safety net: reverses every policy, then gives up Device Owner. */
-    fun devRemoveDeviceOwner() {
-        unlock()
-        policy.clearDeviceOwner()
     }
 
     /** Deliberately bypasses the neverTouch guard: only this method may target our own package. */

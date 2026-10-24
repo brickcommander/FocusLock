@@ -1,8 +1,16 @@
 package dev.focuslock.lock
 
+import dev.focuslock.pin.FakeClock
+import dev.focuslock.pin.InMemoryPinStore
+import dev.focuslock.pin.PinHasher
+import dev.focuslock.pin.PinManager
+import dev.focuslock.pin.VerifyResult
 import dev.focuslock.policy.BlockList
 import dev.focuslock.policy.BrowserPolicy
 import dev.focuslock.policy.FakePolicyController
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -14,13 +22,27 @@ class LockManagerTest {
 
     private lateinit var policy: FakePolicyController
     private lateinit var store: FakeLockStateStore
+    private lateinit var pinManager: PinManager
     private lateinit var manager: LockManager
 
     @Before
     fun setUp() {
         policy = FakePolicyController().apply { deviceOwner = true }
         store = FakeLockStateStore()
-        manager = LockManager(policy, store)
+        pinManager = PinManager(
+            InMemoryPinStore(),
+            PinHasher(iterations = 1_000),
+            FakeClock(),
+            UnconfinedTestDispatcher(),
+        )
+        manager = LockManager(policy, store, pinManager)
+        runBlocking { pinManager.setPin(PIN) }
+    }
+
+    private fun unlockWithCorrectPin(): LockReport = runBlocking {
+        val result = manager.unlock(PIN)
+        assertTrue("expected Unlocked but was $result", result is UnlockResult.Unlocked)
+        (result as UnlockResult.Unlocked).report
     }
 
     @Test
@@ -112,7 +134,7 @@ class LockManagerTest {
         assertTrue(policy.suspendedPackages.contains("com.google.android.youtube"))
         assertTrue(policy.uninstallBlockedPackages.contains("com.google.android.youtube"))
 
-        val report = manager.unlock()
+        val report = unlockWithCorrectPin()
 
         assertFalse(store.isLocked)
         assertTrue(policy.suspendedPackages.isEmpty())
@@ -159,7 +181,7 @@ class LockManagerTest {
         policy.installedPackages.add(BlockList.CHROME)
         manager.lock()
 
-        manager.unlock()
+        unlockWithCorrectPin()
 
         assertTrue(policy.browserPolicies.containsKey(BlockList.CHROME))
         assertNull(policy.browserPolicies[BlockList.CHROME])
@@ -186,7 +208,7 @@ class LockManagerTest {
         policy.installedPackages.add("dev.focuslock.dummytarget")
         manager.lock()
 
-        manager.unlock()
+        unlockWithCorrectPin()
 
         assertTrue(policy.userRestrictions.isEmpty())
         assertFalse(policy.uninstallBlockedPackages.contains(BlockList.SELF))
@@ -220,5 +242,56 @@ class LockManagerTest {
     fun `lock throws when not device owner`() {
         policy.deviceOwner = false
         manager.lock()
+    }
+
+    @Test
+    fun `lock refuses when no pin set`() {
+        val noPinManager = LockManager(
+            policy,
+            store,
+            PinManager(InMemoryPinStore(), PinHasher(iterations = 1_000), FakeClock(), UnconfinedTestDispatcher()),
+        )
+
+        val error = runCatching { noPinManager.lock() }.exceptionOrNull()
+
+        assertTrue(error is IllegalStateException)
+        assertFalse(store.isLocked)
+        assertTrue(policy.calls.none { it.startsWith("setAppsSuspended") || it.startsWith("setUserRestriction") })
+    }
+
+    @Test
+    fun `unlock with wrong pin keeps everything locked`() = runTest {
+        policy.installedPackages.addAll(listOf("dev.focuslock.dummytarget", BlockList.CHROME))
+        manager.lock()
+        policy.calls.clear()
+
+        val result = manager.unlock("000000")
+
+        assertEquals(UnlockResult.Refused(VerifyResult.Wrong(remaining = 4)), result)
+        assertTrue("controller was called: ${policy.calls}", policy.calls.isEmpty())
+        assertTrue(store.isLocked)
+        assertTrue(policy.suspendedPackages.contains("dev.focuslock.dummytarget"))
+        assertTrue(policy.uninstallBlockedPackages.contains(BlockList.SELF))
+        assertEquals(BlockList.userRestrictions.toSet(), policy.userRestrictions)
+    }
+
+    @Test
+    fun `unlock with correct pin reverses all policies`() {
+        policy.installedPackages.addAll(listOf("dev.focuslock.dummytarget", BlockList.CHROME))
+        manager.lock()
+
+        val report = unlockWithCorrectPin()
+
+        assertFalse(store.isLocked)
+        assertTrue(policy.suspendedPackages.isEmpty())
+        assertTrue(policy.uninstallBlockedPackages.isEmpty())
+        assertTrue(policy.userRestrictions.isEmpty())
+        assertFalse(policy.controlDisabledForSelf)
+        assertNull(policy.browserPolicies[BlockList.CHROME])
+        assertTrue(report.applied.contains("dev.focuslock.dummytarget"))
+    }
+
+    private companion object {
+        const val PIN = "482916"
     }
 }
