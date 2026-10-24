@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Normal permission; required for ACTION_DELETE on our own package (targetSdk >= 28). -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+
     <queries>
         <package android:name="com.google.android.youtube" />
         <package android:name="com.reddit.frontpage" />

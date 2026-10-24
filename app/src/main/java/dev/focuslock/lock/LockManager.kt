@@ -73,6 +73,17 @@ class LockManager(
             else -> UnlockResult.Refused(result)
         }
 
+    /** Reverses every policy and gives up Device Owner so the app can be uninstalled. */
+    suspend fun removeCompletely(pin: String): UnlockResult =
+        when (val result = pinManager.verify(pin)) {
+            VerifyResult.Ok -> {
+                val report = reverseAll()
+                policy.clearDeviceOwner()
+                UnlockResult.Unlocked(report)
+            }
+            else -> UnlockResult.Refused(result)
+        }
+
     /** Debug safety net: reverses every policy without a code, then gives up Device Owner. */
     fun devRemoveDeviceOwner() {
         reverseAll()

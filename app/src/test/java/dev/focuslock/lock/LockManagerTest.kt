@@ -345,6 +345,48 @@ class LockManagerTest {
         assertEquals(9_000L, store.lastAppliedEpochMs)
     }
 
+    @Test
+    fun `removeCompletely with wrong pin does nothing`() = runTest {
+        policy.installedPackages.addAll(listOf("dev.focuslock.dummytarget", BlockList.CHROME))
+        manager.lock()
+        policy.calls.clear()
+
+        val result = manager.removeCompletely("000000")
+
+        assertEquals(UnlockResult.Refused(VerifyResult.Wrong(remaining = 4)), result)
+        assertTrue("controller was called: ${policy.calls}", policy.calls.isEmpty())
+        assertTrue(policy.deviceOwner)
+        assertTrue(store.isLocked)
+        assertTrue(policy.suspendedPackages.contains("dev.focuslock.dummytarget"))
+    }
+
+    @Test
+    fun `removeCompletely unlocks then clears device owner`() = runTest {
+        policy.installedPackages.addAll(listOf("dev.focuslock.dummytarget", BlockList.CHROME))
+        manager.lock()
+        policy.calls.clear()
+
+        val result = manager.removeCompletely(PIN)
+
+        assertTrue(result is UnlockResult.Unlocked)
+        val clearIndex = policy.calls.indexOf("clearDeviceOwner")
+        listOf(
+            "setUninstallBlocked:${BlockList.SELF}=false",
+            "setSelfControlDisabled:false",
+            "setBrowserPolicy:${BlockList.CHROME}=null",
+            "setUninstallBlocked:dev.focuslock.dummytarget=false",
+        ).forEach { call ->
+            val index = policy.calls.indexOf(call)
+            assertTrue("missing $call", index >= 0)
+            assertTrue("$call must come before clearDeviceOwner", index < clearIndex)
+        }
+        assertEquals(policy.calls.lastIndex, clearIndex)
+        assertFalse(policy.deviceOwner)
+        assertFalse(store.isLocked)
+        assertTrue(policy.suspendedPackages.isEmpty())
+        assertTrue(policy.userRestrictions.isEmpty())
+    }
+
     private companion object {
         const val PIN = "482916"
     }

@@ -1,5 +1,7 @@
 package dev.focuslock
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -39,6 +41,9 @@ class MainActivity : ComponentActivity() {
                 MainScreen(
                     viewModel = viewModel,
                     onLogBrowserSchema = { container.schemaReader.logSchema(BlockList.CHROME) },
+                    onRequestUninstall = {
+                        startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName")))
+                    },
                 )
             }
         }

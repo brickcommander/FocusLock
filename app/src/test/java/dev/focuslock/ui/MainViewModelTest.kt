@@ -164,6 +164,36 @@ class MainViewModelTest {
         assertTrue(vm.uiState.value.lastReport!!.applied.contains("com.reddit.frontpage"))
     }
 
+    @Test
+    fun `remove completely with correct code requests uninstall`() {
+        fake.deviceOwner = true
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        vm.requestRemoveCompletely()
+        vm.confirmRemoveCompletely()
+        vm.submitRemoveCompletely(PIN)
+
+        assertTrue(vm.uiState.value.uninstallRequested)
+        assertFalse(vm.uiState.value.isDeviceOwner)
+        assertFalse(vm.uiState.value.isLocked)
+    }
+
+    @Test
+    fun `remove completely with wrong code does not request uninstall`() {
+        fake.deviceOwner = true
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        vm.requestRemoveCompletely()
+        vm.confirmRemoveCompletely()
+        vm.submitRemoveCompletely("000000")
+
+        assertFalse(vm.uiState.value.uninstallRequested)
+        assertTrue(vm.uiState.value.isDeviceOwner)
+        assertEquals(PinMessage.Wrong(remaining = 4), vm.uiState.value.pinMessage)
+    }
+
     private companion object {
         const val PIN = "482916"
     }

@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class PinDialogMode { SET, UNLOCK, CHANGE }
+enum class PinDialogMode { SET, UNLOCK, CHANGE, REMOVE }
 
 sealed class PinMessage {
     data class Wrong(val remaining: Int) : PinMessage()
@@ -37,6 +37,8 @@ data class MainUiState(
     val pinMessage: PinMessage? = null,
     val isBusy: Boolean = false,
     val infoMessage: String? = null,
+    val showRemoveConfirm: Boolean = false,
+    val uninstallRequested: Boolean = false,
 )
 
 class MainViewModel(
@@ -126,6 +128,34 @@ class MainViewModel(
                 },
             )
         }
+    }
+
+    fun requestRemoveCompletely() {
+        _uiState.update { it.copy(showRemoveConfirm = true) }
+    }
+
+    fun cancelRemoveCompletely() {
+        _uiState.update { it.copy(showRemoveConfirm = false) }
+    }
+
+    fun confirmRemoveCompletely() {
+        _uiState.update { it.copy(showRemoveConfirm = false, pinDialog = PinDialogMode.REMOVE, pinMessage = null) }
+    }
+
+    fun submitRemoveCompletely(pin: String) {
+        runBusy {
+            when (val result = lockManager.removeCompletely(pin)) {
+                is UnlockResult.Unlocked -> {
+                    _uiState.update { it.copy(lastReport = result.report, uninstallRequested = true) }
+                    closeDialog(info = "All restrictions removed. Confirm the uninstall.")
+                }
+                is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
+            }
+        }
+    }
+
+    fun onUninstallLaunched() {
+        _uiState.update { it.copy(uninstallRequested = false) }
     }
 
     fun clearDeviceOwner() {
