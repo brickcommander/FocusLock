@@ -26,6 +26,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.focuslock.BuildConfig
 import dev.focuslock.lock.LockReport
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
+private val timeFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
 
 @Composable
 fun MainScreen(
@@ -87,6 +93,14 @@ fun MainScreen(
                     MaterialTheme.colorScheme.primary
                 },
             )
+
+            if (state.isLocked && state.lastAppliedMs > 0L) {
+                Text(
+                    text = "Last applied: ${timeFormatter.format(Instant.ofEpochMilli(state.lastAppliedMs))}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             if (state.isDeviceOwner && !state.isPinSet) {
                 Spacer(modifier = Modifier.height(16.dp))

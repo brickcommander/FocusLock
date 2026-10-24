@@ -43,4 +43,9 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onRestart() {
+        super.onRestart()
+        viewModel.reconcile()
+    }
 }

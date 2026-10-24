@@ -23,6 +23,7 @@ class LockManagerTest {
     private lateinit var policy: FakePolicyController
     private lateinit var store: FakeLockStateStore
     private lateinit var pinManager: PinManager
+    private lateinit var clock: FakeClock
     private lateinit var manager: LockManager
 
     @Before
@@ -35,7 +36,8 @@ class LockManagerTest {
             FakeClock(),
             UnconfinedTestDispatcher(),
         )
-        manager = LockManager(policy, store, pinManager)
+        clock = FakeClock()
+        manager = LockManager(policy, store, pinManager, clock)
         runBlocking { pinManager.setPin(PIN) }
     }
 
@@ -250,6 +252,7 @@ class LockManagerTest {
             policy,
             store,
             PinManager(InMemoryPinStore(), PinHasher(iterations = 1_000), FakeClock(), UnconfinedTestDispatcher()),
+            clock,
         )
 
         val error = runCatching { noPinManager.lock() }.exceptionOrNull()
@@ -289,6 +292,57 @@ class LockManagerTest {
         assertFalse(policy.controlDisabledForSelf)
         assertNull(policy.browserPolicies[BlockList.CHROME])
         assertTrue(report.applied.contains("dev.focuslock.dummytarget"))
+    }
+
+    @Test
+    fun `reapply does nothing when unlocked`() {
+        policy.installedPackages.add("dev.focuslock.dummytarget")
+
+        val report = manager.reapplyIfLocked()
+
+        assertNull(report)
+        assertTrue("controller was called: ${policy.calls}", policy.calls.isEmpty())
+        assertFalse(store.isLocked)
+    }
+
+    @Test
+    fun `reapply suspends a newly installed blocked app`() {
+        policy.installedPackages.add("dev.focuslock.dummytarget")
+        manager.lock()
+        assertFalse(policy.suspendedPackages.contains("com.instagram.android"))
+        policy.installedPackages.add("com.instagram.android")
+
+        val report = manager.reapplyIfLocked()
+
+        assertTrue(policy.suspendedPackages.contains("com.instagram.android"))
+        assertTrue(policy.uninstallBlockedPackages.contains("com.instagram.android"))
+        assertTrue(report!!.applied.contains("com.instagram.android"))
+        assertTrue(store.isLocked)
+    }
+
+    @Test
+    fun `reapply skips without device owner and keeps locked state`() {
+        manager.lock()
+        policy.deviceOwner = false
+        policy.calls.clear()
+
+        val report = manager.reapplyIfLocked()
+
+        assertNull(report)
+        assertTrue(store.isLocked)
+        assertEquals(listOf("isDeviceOwner"), policy.calls)
+    }
+
+    @Test
+    fun `lock and reapply record last applied time`() {
+        clock.now = 5_000L
+        manager.lock()
+        assertEquals(5_000L, store.lastAppliedEpochMs)
+
+        clock.now = 9_000L
+        manager.reapplyIfLocked()
+
+        assertEquals(9_000L, store.lastAppliedEpochMs)
     }
 
     private companion object {

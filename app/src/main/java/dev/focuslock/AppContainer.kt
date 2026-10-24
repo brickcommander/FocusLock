@@ -16,5 +16,5 @@ class AppContainer(context: Context) {
     val policyController: PolicyController = DpmPolicyController(context, schemaReader)
     val lockStateStore: LockStateStore = LockStateStore(context)
     val pinManager: PinManager = PinManager(PinStore(context), PinHasher(), SystemClock)
-    val lockManager: LockManager = LockManager(policyController, lockStateStore, pinManager)
+    val lockManager: LockManager = LockManager(policyController, lockStateStore, pinManager, SystemClock)
 }

@@ -6,4 +6,5 @@ package dev.focuslock.lock
  */
 class FakeLockStateStore : LockStateStoreContract {
     override var isLocked: Boolean = false
+    override var lastAppliedEpochMs: Long = 0L
 }

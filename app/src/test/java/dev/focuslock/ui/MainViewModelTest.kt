@@ -35,7 +35,7 @@ class MainViewModelTest {
         fake = FakePolicyController()
         store = FakeLockStateStore()
         pinManager = PinManager(InMemoryPinStore(), PinHasher(iterations = 1_000), FakeClock(), dispatcher)
-        lockManager = LockManager(fake, store, pinManager)
+        lockManager = LockManager(fake, store, pinManager, FakeClock())
     }
 
     @After
@@ -150,6 +150,18 @@ class MainViewModelTest {
 
         assertTrue(vm.uiState.value.isPinSet)
         assertNull(vm.uiState.value.pinDialog)
+    }
+
+    @Test
+    fun `init reapplies lock when stored state is locked`() {
+        fake.deviceOwner = true
+        createViewModelWithPin().lock()
+        fake.installedPackages.add("com.reddit.frontpage")
+
+        val vm = createViewModel()
+
+        assertTrue(fake.suspendedPackages.contains("com.reddit.frontpage"))
+        assertTrue(vm.uiState.value.lastReport!!.applied.contains("com.reddit.frontpage"))
     }
 
     private companion object {

@@ -31,6 +31,7 @@ data class MainUiState(
     val isDeviceOwner: Boolean = false,
     val isLocked: Boolean = false,
     val isPinSet: Boolean = false,
+    val lastAppliedMs: Long = 0L,
     val lastReport: LockReport? = null,
     val pinDialog: PinDialogMode? = null,
     val pinMessage: PinMessage? = null,
@@ -49,7 +50,16 @@ class MainViewModel(
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     init {
+        reconcile()
+    }
+
+    /** Re-applies the lock if something drifted (e.g. a blocked app was installed), then refreshes. */
+    fun reconcile() {
+        val report = lockManager.reapplyIfLocked()
         refresh()
+        if (report != null) {
+            _uiState.update { it.copy(lastReport = report) }
+        }
     }
 
     fun refresh() {
@@ -58,15 +68,15 @@ class MainViewModel(
                 isDeviceOwner = policyController.isDeviceOwner(),
                 isLocked = lockStateStore.isLocked,
                 isPinSet = pinManager.isSet(),
+                lastAppliedMs = lockStateStore.lastAppliedEpochMs,
             )
         }
     }
 
     fun lock() {
         val report = lockManager.lock()
-        _uiState.update {
-            it.copy(isLocked = lockStateStore.isLocked, lastReport = report, infoMessage = null)
-        }
+        refresh()
+        _uiState.update { it.copy(lastReport = report, infoMessage = null) }
     }
 
     fun openPinDialog(mode: PinDialogMode) {

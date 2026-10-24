@@ -2,6 +2,7 @@ package dev.focuslock.lock
 
 import dev.focuslock.policy.BlockList
 import dev.focuslock.policy.BrowserPolicy
+import dev.focuslock.pin.Clock
 import dev.focuslock.pin.PinManager
 import dev.focuslock.pin.VerifyResult
 import dev.focuslock.policy.PolicyController
@@ -10,12 +11,26 @@ class LockManager(
     private val policy: PolicyController,
     private val store: LockStateStoreContract,
     private val pinManager: PinManager,
+    private val clock: Clock,
 ) {
 
     fun lock(): LockReport {
         check(policy.isDeviceOwner()) { "Cannot lock: not Device Owner" }
         check(pinManager.isSet()) { "Cannot lock: no code set" }
+        return applyAll()
+    }
 
+    /**
+     * Re-runs the lock steps when the stored state says locked. Returns null when nothing ran.
+     * Without Device Owner it skips and keeps isLocked, so "set DO again, then Unlock" still works.
+     */
+    fun reapplyIfLocked(): LockReport? {
+        if (!store.isLocked) return null
+        if (!policy.isDeviceOwner()) return null
+        return applyAll()
+    }
+
+    private fun applyAll(): LockReport {
         val (installed, skipped) = blockTargets().partition { policy.isInstalled(it) }
 
         val failed = if (installed.isNotEmpty()) {
@@ -42,6 +57,7 @@ class LockManager(
         protectSelf(true)
 
         store.isLocked = true
+        store.lastAppliedEpochMs = clock.nowMs()
 
         return LockReport(
             applied = applied,
