@@ -27,7 +27,10 @@ import dev.focuslock.BuildConfig
 import dev.focuslock.lock.LockReport
 
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
+fun MainScreen(
+    viewModel: MainViewModel,
+    onLogBrowserSchema: () -> Unit,
+) {
     val state by viewModel.uiState.collectAsState()
 
     Scaffold { innerPadding ->
@@ -109,6 +112,13 @@ fun MainScreen(viewModel: MainViewModel) {
                 ReportSection(report)
             }
 
+            if (BuildConfig.DEBUG) {
+                Spacer(modifier = Modifier.height(48.dp))
+                Button(onClick = onLogBrowserSchema) {
+                    Text("DEV: Log browser schema")
+                }
+            }
+
             // DEV: Remove Device Owner
             if (BuildConfig.DEBUG && state.isDeviceOwner) {
                 Spacer(modifier = Modifier.height(48.dp))
@@ -138,6 +148,21 @@ private fun ReportSection(report: LockReport) {
                 color = MaterialTheme.colorScheme.primary,
             )
             report.applied.forEach { pkg ->
+                Text(
+                    text = "  • $pkg",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        if (report.browserPolicyApplied.isNotEmpty()) {
+            Text(
+                text = "Website blocklist pushed to:",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            report.browserPolicyApplied.forEach { pkg ->
                 Text(
                     text = "  • $pkg",
                     style = MaterialTheme.typography.bodySmall,

@@ -1,9 +1,11 @@
 package dev.focuslock.lock
 
 import dev.focuslock.policy.BlockList
+import dev.focuslock.policy.BrowserPolicy
 import dev.focuslock.policy.FakePolicyController
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -127,6 +129,38 @@ class LockManagerTest {
         assertTrue(report1.applied.contains("dev.focuslock.dummytarget"))
         assertTrue(report2.applied.contains("dev.focuslock.dummytarget"))
         assertTrue(store.isLocked)
+    }
+
+    @Test
+    fun `lock applies browser policy to Chrome when installed`() {
+        policy.installedPackages.add(BlockList.CHROME)
+
+        val report = manager.lock()
+
+        assertEquals(BrowserPolicy.locked(), policy.browserPolicies[BlockList.CHROME])
+        assertEquals(listOf(BlockList.CHROME), report.browserPolicyApplied)
+        assertFalse(report.skippedNotInstalled.contains(BlockList.CHROME))
+    }
+
+    @Test
+    fun `lock skips browser policy when Chrome not installed`() {
+        val report = manager.lock()
+
+        assertFalse(policy.browserPolicies.containsKey(BlockList.CHROME))
+        assertTrue(report.browserPolicyApplied.isEmpty())
+        assertTrue(report.skippedNotInstalled.contains(BlockList.CHROME))
+    }
+
+    @Test
+    fun `unlock clears browser policy with null`() {
+        policy.installedPackages.add(BlockList.CHROME)
+        manager.lock()
+
+        manager.unlock()
+
+        assertTrue(policy.browserPolicies.containsKey(BlockList.CHROME))
+        assertNull(policy.browserPolicies[BlockList.CHROME])
+        assertTrue(policy.calls.contains("setBrowserPolicy:${BlockList.CHROME}=null"))
     }
 
     @Test(expected = IllegalStateException::class)

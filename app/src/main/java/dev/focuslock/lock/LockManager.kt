@@ -1,6 +1,7 @@
 package dev.focuslock.lock
 
 import dev.focuslock.policy.BlockList
+import dev.focuslock.policy.BrowserPolicy
 import dev.focuslock.policy.PolicyController
 
 class LockManager(
@@ -11,10 +12,7 @@ class LockManager(
     fun lock(): LockReport {
         check(policy.isDeviceOwner()) { "Cannot lock: not Device Owner" }
 
-        val targets = BlockList.apps.filter { it !in BlockList.neverTouch }
-
-        val installed = targets.filter { policy.isInstalled(it) }
-        val skipped = targets.filter { !policy.isInstalled(it) }
+        val (installed, skipped) = blockTargets().partition { policy.isInstalled(it) }
 
         val failed = if (installed.isNotEmpty()) {
             policy.setAppsSuspended(installed, true)
@@ -28,22 +26,27 @@ class LockManager(
             policy.setUninstallBlocked(pkg, true)
         }
 
+        val chromeInstalled = policy.isInstalled(BlockList.CHROME)
+        if (chromeInstalled) {
+            policy.setBrowserPolicy(BlockList.CHROME, BrowserPolicy.locked())
+        }
+
         store.isLocked = true
 
         return LockReport(
             applied = applied,
-            skippedNotInstalled = skipped,
+            skippedNotInstalled = if (chromeInstalled) skipped else skipped + BlockList.CHROME,
             failed = failed,
+            browserPolicyApplied = if (chromeInstalled) listOf(BlockList.CHROME) else emptyList(),
         )
     }
 
     fun unlock(): LockReport {
         check(policy.isDeviceOwner()) { "Cannot unlock: not Device Owner" }
 
-        val targets = BlockList.apps.filter { it !in BlockList.neverTouch }
+        policy.setBrowserPolicy(BlockList.CHROME, null)
 
-        val installed = targets.filter { policy.isInstalled(it) }
-        val skipped = targets.filter { !policy.isInstalled(it) }
+        val (installed, skipped) = blockTargets().partition { policy.isInstalled(it) }
 
         for (pkg in installed) {
             policy.setUninstallBlocked(pkg, false)
@@ -65,4 +68,6 @@ class LockManager(
             failed = failed,
         )
     }
+
+    private fun blockTargets(): List<String> = BlockList.apps.filter { it !in BlockList.neverTouch }
 }

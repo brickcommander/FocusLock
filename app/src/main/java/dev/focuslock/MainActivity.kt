@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import dev.focuslock.policy.BlockList
 import dev.focuslock.ui.MainScreen
 import dev.focuslock.ui.MainViewModel
 import dev.focuslock.ui.theme.FocusLockTheme
@@ -22,7 +23,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             FocusLockTheme {
-                MainScreen(viewModel)
+                MainScreen(
+                    viewModel = viewModel,
+                    onLogBrowserSchema = { container.schemaReader.logSchema(BlockList.CHROME) },
+                )
             }
         }
     }

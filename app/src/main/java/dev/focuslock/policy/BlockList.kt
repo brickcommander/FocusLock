@@ -3,6 +3,10 @@ package dev.focuslock.policy
 import dev.focuslock.BuildConfig
 
 object BlockList {
+    const val CHROME = "com.android.chrome"
+
+    val sites: List<String> = listOf("youtube.com", "youtu.be", "reddit.com", "redd.it", "instagram.com")
+
     val apps: List<String> = buildList {
         add("com.google.android.youtube")
         add("com.reddit.frontpage")

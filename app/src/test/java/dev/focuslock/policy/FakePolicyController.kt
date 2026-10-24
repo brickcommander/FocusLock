@@ -39,6 +39,13 @@ class FakePolicyController : PolicyController {
         return failed
     }
 
+    val browserPolicies: MutableMap<String, BrowserPolicy?> = mutableMapOf()
+
+    override fun setBrowserPolicy(pkg: String, policy: BrowserPolicy?) {
+        calls.add("setBrowserPolicy:$pkg=${if (policy == null) "null" else "set"}")
+        browserPolicies[pkg] = policy
+    }
+
     override fun setUninstallBlocked(pkg: String, blocked: Boolean) {
         calls.add("setUninstallBlocked:$pkg=$blocked")
         if (blocked) {
