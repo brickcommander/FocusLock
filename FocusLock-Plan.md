@@ -405,6 +405,9 @@ While locked, the user can't trivially remove or neuter FocusLock.
 
 > 4.9 is our **emergency escape**. If it does NOT fully restore the phone, stop and report — do not continue to Step 5.
 
+> **4.9 result (API 37 emulator, 2026-10-25):** `remove-active-admin` clears DO, user restrictions, self-protection and the Chrome policy, but **suspended apps stay suspended** (`suspendingPackage=android`). Accepted escape path: `adb shell dpm set-device-owner dev.focuslock/.admin.FocusAdminReceiver` → open FocusLock → **Unlock** (or DEV button). ⚠️ `set-device-owner` requires zero accounts, so on the real phone remove accounts first.
+> **4.2 note:** while FocusLock is Device Owner, `adb uninstall dev.focuslock` returns `DELETE_FAILED_DEVICE_POLICY_MANAGER` (DO check runs before the uninstall-block check), locked or not.
+
 ### Acceptance
 - Build green. 4.1–4.10 pass. Escape hatch (4.9, 4.10) confirmed working.
 
@@ -601,6 +604,8 @@ adb shell pm list users
 
 # Emergency: remove device owner (works because testOnly=true)
 adb shell dpm remove-active-admin dev.focuslock/.admin.FocusAdminReceiver
+# ⚠️ Leaves blocked apps suspended. To lift: set DO again, open FocusLock, Unlock.
+adb shell dpm set-device-owner dev.focuslock/.admin.FocusAdminReceiver
 
 # App logs
 adb logcat -s FocusLock

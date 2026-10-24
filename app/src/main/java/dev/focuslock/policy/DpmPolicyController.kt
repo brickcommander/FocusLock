@@ -50,4 +50,17 @@ class DpmPolicyController(
         }
         dpm.setApplicationRestrictions(admin, pkg, bundle)
     }
+
+    override fun setUserRestriction(key: String, enabled: Boolean) {
+        if (enabled) {
+            dpm.addUserRestriction(admin, key)
+        } else {
+            dpm.clearUserRestriction(admin, key)
+        }
+    }
+
+    override fun setSelfControlDisabled(disabled: Boolean) {
+        val packages = if (disabled) listOf(context.packageName) else emptyList()
+        dpm.setUserControlDisabledPackages(admin, packages)
+    }
 }

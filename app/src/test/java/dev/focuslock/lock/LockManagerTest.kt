@@ -47,11 +47,14 @@ class LockManagerTest {
 
         val report = manager.lock()
 
-        // neverTouch packages must NOT appear in applied, suspended, or uninstall-blocked
+        // neverTouch packages are never suspended; only protectSelf may uninstall-block our own package
         assertFalse(policy.suspendedPackages.contains("dev.focuslock"))
         assertFalse(policy.suspendedPackages.contains("com.android.settings"))
         assertFalse(policy.suspendedPackages.contains("com.android.vending"))
-        assertFalse(policy.uninstallBlockedPackages.contains("dev.focuslock"))
+        assertFalse(policy.uninstallBlockedPackages.contains("com.android.settings"))
+        assertFalse(policy.uninstallBlockedPackages.contains("com.android.vending"))
+        assertFalse(report.applied.contains("dev.focuslock"))
+        assertTrue(policy.calls.none { it.startsWith("setAppsSuspended") && it.contains("dev.focuslock,") })
 
         // YouTube should be affected
         assertTrue(policy.suspendedPackages.contains("com.google.android.youtube"))
@@ -161,6 +164,56 @@ class LockManagerTest {
         assertTrue(policy.browserPolicies.containsKey(BlockList.CHROME))
         assertNull(policy.browserPolicies[BlockList.CHROME])
         assertTrue(policy.calls.contains("setBrowserPolicy:${BlockList.CHROME}=null"))
+    }
+
+    @Test
+    fun `lock adds every user restriction in BlockList`() {
+        manager.lock()
+
+        assertEquals(BlockList.userRestrictions.toSet(), policy.userRestrictions)
+    }
+
+    @Test
+    fun `lock protects self (uninstall block + control disabled)`() {
+        manager.lock()
+
+        assertTrue(policy.uninstallBlockedPackages.contains(BlockList.SELF))
+        assertTrue(policy.controlDisabledForSelf)
+    }
+
+    @Test
+    fun `unlock removes every restriction and self protection`() {
+        policy.installedPackages.add("dev.focuslock.dummytarget")
+        manager.lock()
+
+        manager.unlock()
+
+        assertTrue(policy.userRestrictions.isEmpty())
+        assertFalse(policy.uninstallBlockedPackages.contains(BlockList.SELF))
+        assertFalse(policy.controlDisabledForSelf)
+        BlockList.userRestrictions.forEach {
+            assertTrue(policy.calls.contains("setUserRestriction:$it=false"))
+        }
+    }
+
+    @Test
+    fun `debug removal unlocks before clearing device owner`() {
+        manager.lock()
+        policy.calls.clear()
+
+        manager.devRemoveDeviceOwner()
+
+        val clearIndex = policy.calls.indexOf("clearDeviceOwner")
+        val unprotectIndex = policy.calls.indexOf("setUninstallBlocked:${BlockList.SELF}=false")
+        val lastRestrictionIndex = BlockList.userRestrictions.maxOf {
+            policy.calls.indexOf("setUserRestriction:$it=false")
+        }
+        assertTrue(unprotectIndex >= 0)
+        assertTrue(lastRestrictionIndex >= 0)
+        assertTrue(clearIndex > unprotectIndex)
+        assertTrue(clearIndex > lastRestrictionIndex)
+        assertEquals(clearIndex, policy.calls.lastIndex)
+        assertFalse(store.isLocked)
     }
 
     @Test(expected = IllegalStateException::class)

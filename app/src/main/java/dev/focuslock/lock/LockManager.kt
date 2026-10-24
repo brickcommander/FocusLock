@@ -31,6 +31,12 @@ class LockManager(
             policy.setBrowserPolicy(BlockList.CHROME, BrowserPolicy.locked())
         }
 
+        for (key in BlockList.userRestrictions) {
+            policy.setUserRestriction(key, true)
+        }
+
+        protectSelf(true)
+
         store.isLocked = true
 
         return LockReport(
@@ -43,6 +49,12 @@ class LockManager(
 
     fun unlock(): LockReport {
         check(policy.isDeviceOwner()) { "Cannot unlock: not Device Owner" }
+
+        protectSelf(false)
+
+        for (key in BlockList.userRestrictions) {
+            policy.setUserRestriction(key, false)
+        }
 
         policy.setBrowserPolicy(BlockList.CHROME, null)
 
@@ -67,6 +79,18 @@ class LockManager(
             skippedNotInstalled = skipped,
             failed = failed,
         )
+    }
+
+    /** Debug safety net: reverses every policy, then gives up Device Owner. */
+    fun devRemoveDeviceOwner() {
+        unlock()
+        policy.clearDeviceOwner()
+    }
+
+    /** Deliberately bypasses the neverTouch guard: only this method may target our own package. */
+    private fun protectSelf(enabled: Boolean) {
+        policy.setUninstallBlocked(BlockList.SELF, enabled)
+        policy.setSelfControlDisabled(enabled)
     }
 
     private fun blockTargets(): List<String> = BlockList.apps.filter { it !in BlockList.neverTouch }

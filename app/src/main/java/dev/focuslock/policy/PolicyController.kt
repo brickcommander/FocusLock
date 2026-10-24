@@ -7,4 +7,6 @@ interface PolicyController {
     fun setAppsSuspended(pkgs: List<String>, suspended: Boolean): List<String>
     fun setUninstallBlocked(pkg: String, blocked: Boolean)
     fun setBrowserPolicy(pkg: String, policy: BrowserPolicy?)   // null = clear (empty Bundle)
+    fun setUserRestriction(key: String, enabled: Boolean)
+    fun setSelfControlDisabled(disabled: Boolean)   // empty list when false
 }

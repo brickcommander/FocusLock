@@ -52,7 +52,7 @@ class MainViewModel(
     }
 
     fun clearDeviceOwner() {
-        policyController.clearDeviceOwner()
+        lockManager.devRemoveDeviceOwner()
         refresh()
     }
 }

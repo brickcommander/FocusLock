@@ -1,8 +1,10 @@
 package dev.focuslock.policy
 
+import android.os.UserManager
 import dev.focuslock.BuildConfig
 
 object BlockList {
+    const val SELF = "dev.focuslock"
     const val CHROME = "com.android.chrome"
 
     val sites: List<String> = listOf("youtube.com", "youtu.be", "reddit.com", "redd.it", "instagram.com")
@@ -18,8 +20,14 @@ object BlockList {
     }
 
     val neverTouch: Set<String> = setOf(
-        "dev.focuslock",
+        SELF,
         "com.android.settings",
         "com.android.vending",
+    )
+
+    val userRestrictions: List<String> = listOf(
+        UserManager.DISALLOW_SAFE_BOOT,
+        UserManager.DISALLOW_ADD_USER,
+        UserManager.DISALLOW_CONFIG_DATE_TIME,
     )
 }

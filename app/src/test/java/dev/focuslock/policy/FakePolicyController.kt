@@ -39,6 +39,19 @@ class FakePolicyController : PolicyController {
         return failed
     }
 
+    val userRestrictions: MutableSet<String> = mutableSetOf()
+    var controlDisabledForSelf: Boolean = false
+
+    override fun setUserRestriction(key: String, enabled: Boolean) {
+        calls.add("setUserRestriction:$key=$enabled")
+        if (enabled) userRestrictions.add(key) else userRestrictions.remove(key)
+    }
+
+    override fun setSelfControlDisabled(disabled: Boolean) {
+        calls.add("setSelfControlDisabled:$disabled")
+        controlDisabledForSelf = disabled
+    }
+
     val browserPolicies: MutableMap<String, BrowserPolicy?> = mutableMapOf()
 
     override fun setBrowserPolicy(pkg: String, policy: BrowserPolicy?) {
