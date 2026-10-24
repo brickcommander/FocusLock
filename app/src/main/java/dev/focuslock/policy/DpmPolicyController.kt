@@ -3,6 +3,7 @@ package dev.focuslock.policy
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import dev.focuslock.admin.FocusAdminReceiver
 
 class DpmPolicyController(private val context: Context) : PolicyController {
@@ -17,5 +18,23 @@ class DpmPolicyController(private val context: Context) : PolicyController {
     @Suppress("DEPRECATION")
     override fun clearDeviceOwner() {
         dpm.clearDeviceOwnerApp(context.packageName)
+    }
+
+    override fun isInstalled(pkg: String): Boolean {
+        return try {
+            context.packageManager.getPackageInfo(pkg, 0)
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
+        }
+    }
+
+    override fun setAppsSuspended(pkgs: List<String>, suspended: Boolean): List<String> {
+        if (pkgs.isEmpty()) return emptyList()
+        return dpm.setPackagesSuspended(admin, pkgs.toTypedArray(), suspended).toList()
+    }
+
+    override fun setUninstallBlocked(pkg: String, blocked: Boolean) {
+        dpm.setUninstallBlocked(admin, pkg, blocked)
     }
 }

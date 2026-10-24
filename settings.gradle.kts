@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "FocusLock"
 include(":app")
+include(":dummytarget")

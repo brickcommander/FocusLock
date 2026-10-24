@@ -14,7 +14,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val container = (application as FocusApp).container
-        val viewModel = MainViewModel(container.policyController)
+        val viewModel = MainViewModel(
+            policyController = container.policyController,
+            lockManager = container.lockManager,
+            lockStateStore = container.lockStateStore,
+        )
 
         setContent {
             FocusLockTheme {

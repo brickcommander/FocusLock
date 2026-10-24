@@ -2,6 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <queries>
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.reddit.frontpage" />
+        <package android:name="com.instagram.android" />
+        <package android:name="com.sec.android.app.sbrowser" />
+        <package android:name="org.mozilla.firefox" />
+        <package android:name="com.brave.browser" />
+        <package android:name="com.android.chrome" />
+        <package android:name="dev.focuslock.dummytarget" />
+    </queries>
+
     <application
         android:name=".FocusApp"
         android:allowBackup="true"
