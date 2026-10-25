@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">FocusLock</string>
+    <string name="a11y_service_description">FocusLock uses this only to detect when a blocked app or website opens. Nothing is stored or sent anywhere.</string>
 </resources>

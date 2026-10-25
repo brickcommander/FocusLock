@@ -27,6 +27,7 @@ sealed class PinMessage {
 }
 
 data class MainUiState(
+    val isBlockerServiceEnabled: Boolean = false,
     val isLocked: Boolean = false,
     val isPinSet: Boolean = false,
     val lastAppliedMs: Long = 0L,
@@ -40,6 +41,7 @@ class MainViewModel(
     private val lockManager: LockManager,
     private val lockStateStore: LockStateStoreContract,
     private val pinManager: PinManager,
+    private val isBlockerServiceEnabled: () -> Boolean,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
@@ -52,6 +54,7 @@ class MainViewModel(
     fun refresh() {
         _uiState.update {
             it.copy(
+                isBlockerServiceEnabled = isBlockerServiceEnabled(),
                 isLocked = lockStateStore.isLocked,
                 isPinSet = pinManager.isSet(),
                 lastAppliedMs = lockStateStore.lastAppliedEpochMs,

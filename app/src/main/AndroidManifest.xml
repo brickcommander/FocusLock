@@ -28,6 +28,26 @@
             </intent-filter>
         </activity>
 
+        <service
+            android:name=".blocker.FocusAccessibilityService"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service" />
+        </service>
+
+        <activity
+            android:name=".blocker.BlockedActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="dev.focuslock.blocked"
+            android:theme="@style/Theme.FocusLock" />
+
         <receiver
             android:name=".admin.FocusAdminReceiver"
             android:exported="true"

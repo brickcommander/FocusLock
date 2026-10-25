@@ -31,7 +31,10 @@ private val timeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
 
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
+fun MainScreen(
+    viewModel: MainViewModel,
+    onOpenAccessibilitySettings: () -> Unit,
+) {
     val state by viewModel.uiState.collectAsState()
 
     Scaffold { innerPadding ->
@@ -49,6 +52,24 @@ fun MainScreen(viewModel: MainViewModel) {
             )
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = if (state.isBlockerServiceEnabled) "Blocker service: ON" else "Blocker service: OFF",
+                style = MaterialTheme.typography.titleMedium,
+                color = if (state.isBlockerServiceEnabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+            )
+            if (!state.isBlockerServiceEnabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = onOpenAccessibilitySettings) {
+                    Text("Turn on blocker")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = if (state.isLocked) "Status: LOCKED" else "Status: UNLOCKED",

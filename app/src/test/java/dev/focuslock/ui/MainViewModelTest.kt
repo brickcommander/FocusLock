@@ -40,7 +40,9 @@ class MainViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() = MainViewModel(lockManager, store, pinManager)
+    private var serviceEnabled = false
+
+    private fun createViewModel() = MainViewModel(lockManager, store, pinManager) { serviceEnabled }
 
     private fun createViewModelWithPin(): MainViewModel = createViewModel().apply {
         submitSetPin(PIN, PIN)
@@ -128,6 +130,17 @@ class MainViewModelTest {
 
         assertTrue(vm.uiState.value.isPinSet)
         assertNull(vm.uiState.value.pinDialog)
+    }
+
+    @Test
+    fun `blocker service status is re-read on refresh`() {
+        val vm = createViewModel()
+        assertFalse(vm.uiState.value.isBlockerServiceEnabled)
+
+        serviceEnabled = true
+        vm.refresh()
+
+        assertTrue(vm.uiState.value.isBlockerServiceEnabled)
     }
 
     @Test
