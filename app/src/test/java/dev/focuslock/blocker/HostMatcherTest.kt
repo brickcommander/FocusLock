@@ -53,6 +53,25 @@ class HostMatcherTest {
     }
 
     @Test
+    fun `chrome url bar formats seen in the spike`() {
+        val seen = mapOf(
+            "youtube.com" to "youtube.com",
+            "m.youtube.com" to "m.youtube.com",
+            "https://reddit.com" to "reddit.com",
+            "reddit.com" to "reddit.com",
+        )
+
+        seen.forEach { (text, host) -> assertEquals(text, host, HostMatcher.extractHost(text)) }
+    }
+
+    @Test
+    fun `chrome empty bar hint returns null`() {
+        val host = HostMatcher.extractHost("Search Google or type URL")
+
+        assertNull(host)
+    }
+
+    @Test
     fun `blank text returns null`() {
         assertNull(HostMatcher.extractHost(""))
         assertNull(HostMatcher.extractHost("   "))

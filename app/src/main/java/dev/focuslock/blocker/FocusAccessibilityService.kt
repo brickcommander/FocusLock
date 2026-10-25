@@ -56,7 +56,8 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     private fun handle(pkg: String) {
-        val screenEvent = ScreenEvent(packageName = pkg, urlBarText = null, screenTexts = emptyList())
+        val urlBarText = if (pkg == BlockList.CHROME) ChromeUrlReader.read(rootInActiveWindow) else null
+        val screenEvent = ScreenEvent(packageName = pkg, urlBarText = urlBarText, screenTexts = emptyList())
         val decision = decider.decide(screenEvent, isLocked)
         if (throttle.shouldFire(decision)) execute(decision)
     }
