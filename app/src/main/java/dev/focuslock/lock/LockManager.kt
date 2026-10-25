@@ -31,6 +31,9 @@ class LockManager(
     }
 
     private fun applyAll(): LockReport {
+        // Recorded first so a failure part-way through still leaves Unlock available.
+        store.isLocked = true
+
         val (installed, skipped) = blockTargets().partition { policy.isInstalled(it) }
 
         val failed = if (installed.isNotEmpty()) {
@@ -56,7 +59,6 @@ class LockManager(
 
         protectSelf(true)
 
-        store.isLocked = true
         store.lastAppliedEpochMs = clock.nowMs()
 
         return LockReport(

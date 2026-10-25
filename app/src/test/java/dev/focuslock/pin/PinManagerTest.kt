@@ -103,6 +103,23 @@ class PinManagerTest {
     }
 
     @Test
+    fun `lockout never lasts more than 1h after the clock goes backwards`() = runTest {
+        manager.setPin("482916")
+        clock.advance(30L * 24 * 60 * 60 * 1000L)
+        repeat(5) { manager.verify("000000") }
+        clock.now -= 30L * 24 * 60 * 60 * 1000L
+
+        val expectedUntil = clock.now + 60 * 60 * 1000L
+
+        val during = manager.verify("482916")
+        clock.advance(60 * 60 * 1000L)
+        val after = manager.verify("482916")
+
+        assertEquals(VerifyResult.LockedOut(untilMs = expectedUntil), during)
+        assertEquals(VerifyResult.Ok, after)
+    }
+
+    @Test
     fun `plain pin never stored`() = runTest {
         val pin = "482916"
 

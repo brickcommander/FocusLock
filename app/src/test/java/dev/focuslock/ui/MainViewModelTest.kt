@@ -194,6 +194,62 @@ class MainViewModelTest {
         assertEquals(PinMessage.Wrong(remaining = 4), vm.uiState.value.pinMessage)
     }
 
+    @Test
+    fun `lock failure shows an error instead of crashing and keeps unlock available`() {
+        fake.deviceOwner = true
+        val vm = createViewModelWithPin()
+        fake.failingCallPrefix = "setUserRestriction"
+
+        vm.lock()
+
+        assertTrue(vm.uiState.value.errorMessage!!.contains("Fake DPM failure"))
+        assertTrue(vm.uiState.value.isLocked)
+    }
+
+    @Test
+    fun `unlock failure shows an error, closes the dialog and stays locked`() {
+        fake.deviceOwner = true
+        val vm = createViewModelWithPin()
+        vm.lock()
+        fake.failingCallPrefix = "setUninstallBlocked"
+
+        vm.openPinDialog(PinDialogMode.UNLOCK)
+        vm.submitUnlock(PIN)
+
+        assertTrue(vm.uiState.value.errorMessage!!.contains("Fake DPM failure"))
+        assertTrue(vm.uiState.value.isLocked)
+        assertNull(vm.uiState.value.pinDialog)
+        assertFalse(vm.uiState.value.isBusy)
+    }
+
+    @Test
+    fun `successful retry clears the previous error`() {
+        fake.deviceOwner = true
+        val vm = createViewModelWithPin()
+        vm.lock()
+        fake.failingCallPrefix = "setUninstallBlocked"
+        vm.submitUnlock(PIN)
+        fake.failingCallPrefix = null
+
+        vm.submitUnlock(PIN)
+
+        assertNull(vm.uiState.value.errorMessage)
+        assertFalse(vm.uiState.value.isLocked)
+    }
+
+    @Test
+    fun `reapply failure at startup shows an error instead of crashing`() {
+        fake.deviceOwner = true
+        fake.installedPackages.add("dev.focuslock.dummytarget")
+        createViewModelWithPin().lock()
+        fake.failingCallPrefix = "setAppsSuspended"
+
+        val vm = createViewModel()
+
+        assertTrue(vm.uiState.value.errorMessage!!.contains("Fake DPM failure"))
+        assertTrue(vm.uiState.value.isLocked)
+    }
+
     private companion object {
         const val PIN = "482916"
     }

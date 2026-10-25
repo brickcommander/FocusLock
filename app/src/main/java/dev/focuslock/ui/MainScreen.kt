@@ -154,6 +154,11 @@ fun MainScreen(
                 Text(it, style = MaterialTheme.typography.bodyMedium)
             }
 
+            state.errorMessage?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+            }
+
             if (state.isDeviceOwner && state.isPinSet) {
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(onClick = viewModel::requestRemoveCompletely) {

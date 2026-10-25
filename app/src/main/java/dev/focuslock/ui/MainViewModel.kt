@@ -10,6 +10,7 @@ import dev.focuslock.pin.PinManager
 import dev.focuslock.pin.VerifyResult
 import dev.focuslock.pin.WrongPinException
 import dev.focuslock.policy.PolicyController
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +38,7 @@ data class MainUiState(
     val pinMessage: PinMessage? = null,
     val isBusy: Boolean = false,
     val infoMessage: String? = null,
+    val errorMessage: String? = null,
     val showRemoveConfirm: Boolean = false,
     val uninstallRequested: Boolean = false,
 )
@@ -57,11 +59,13 @@ class MainViewModel(
 
     /** Re-applies the lock if something drifted (e.g. a blocked app was installed), then refreshes. */
     fun reconcile() {
-        val report = lockManager.reapplyIfLocked()
-        refresh()
-        if (report != null) {
-            _uiState.update { it.copy(lastReport = report) }
+        guardPolicy {
+            val report = lockManager.reapplyIfLocked()
+            if (report != null) {
+                _uiState.update { it.copy(lastReport = report) }
+            }
         }
+        refresh()
     }
 
     fun refresh() {
@@ -76,9 +80,11 @@ class MainViewModel(
     }
 
     fun lock() {
-        val report = lockManager.lock()
+        guardPolicy {
+            val report = lockManager.lock()
+            _uiState.update { it.copy(lastReport = report, infoMessage = null) }
+        }
         refresh()
-        _uiState.update { it.copy(lastReport = report, infoMessage = null) }
     }
 
     fun openPinDialog(mode: PinDialogMode) {
@@ -105,12 +111,14 @@ class MainViewModel(
 
     fun submitUnlock(pin: String) {
         runBusy {
-            when (val result = lockManager.unlock(pin)) {
-                is UnlockResult.Unlocked -> {
-                    _uiState.update { it.copy(isLocked = lockStateStore.isLocked, lastReport = result.report) }
-                    closeDialog(info = null)
+            guardPolicy {
+                when (val result = lockManager.unlock(pin)) {
+                    is UnlockResult.Unlocked -> {
+                        _uiState.update { it.copy(isLocked = lockStateStore.isLocked, lastReport = result.report) }
+                        closeDialog(info = null)
+                    }
+                    is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
                 }
-                is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
             }
         }
     }
@@ -144,12 +152,14 @@ class MainViewModel(
 
     fun submitRemoveCompletely(pin: String) {
         runBusy {
-            when (val result = lockManager.removeCompletely(pin)) {
-                is UnlockResult.Unlocked -> {
-                    _uiState.update { it.copy(lastReport = result.report, uninstallRequested = true) }
-                    closeDialog(info = "All restrictions removed. Confirm the uninstall.")
+            guardPolicy {
+                when (val result = lockManager.removeCompletely(pin)) {
+                    is UnlockResult.Unlocked -> {
+                        _uiState.update { it.copy(lastReport = result.report, uninstallRequested = true) }
+                        closeDialog(info = "All restrictions removed. Confirm the uninstall.")
+                    }
+                    is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
                 }
-                is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
             }
         }
     }
@@ -159,8 +169,23 @@ class MainViewModel(
     }
 
     fun clearDeviceOwner() {
-        lockManager.devRemoveDeviceOwner()
+        guardPolicy { lockManager.devRemoveDeviceOwner() }
         refresh()
+    }
+
+    /** Shows a failed Device Owner call on screen instead of crashing, so Unlock stays reachable. */
+    private inline fun guardPolicy(block: () -> Unit) {
+        _uiState.update { it.copy(errorMessage = null) }
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: RuntimeException) {
+            _uiState.update {
+                it.copy(pinDialog = null, pinMessage = null, errorMessage = "Device change failed: ${e.message}")
+            }
+            refresh()
+        }
     }
 
     private fun runBusy(block: suspend () -> Unit) {

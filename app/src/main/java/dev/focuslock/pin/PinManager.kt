@@ -59,7 +59,12 @@ class PinManager(
         if (!isSet()) return VerifyResult.NotSet
 
         val now = clock.nowMs()
-        val lockoutUntil = store.lockoutUntilEpochMs
+        var lockoutUntil = store.lockoutUntilEpochMs
+        if (lockoutUntil - now > LOCKOUT_MS) {
+            // The clock went backwards since the lockout started; never wait longer than one lockout.
+            lockoutUntil = now + LOCKOUT_MS
+            store.lockoutUntilEpochMs = lockoutUntil
+        }
         if (now < lockoutUntil) return VerifyResult.LockedOut(lockoutUntil)
 
         if (matchesStored(pin)) {

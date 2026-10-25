@@ -387,6 +387,42 @@ class LockManagerTest {
         assertTrue(policy.userRestrictions.isEmpty())
     }
 
+    @Test
+    fun `lock that fails part-way stays marked locked so unlock can reverse it`() {
+        policy.installedPackages.add("dev.focuslock.dummytarget")
+        policy.failingCallPrefix = "setUserRestriction"
+
+        val error = runCatching { manager.lock() }.exceptionOrNull()
+
+        assertTrue(error is SecurityException)
+        assertTrue(store.isLocked)
+        assertTrue(policy.suspendedPackages.contains("dev.focuslock.dummytarget"))
+
+        policy.failingCallPrefix = null
+        unlockWithCorrectPin()
+
+        assertFalse(store.isLocked)
+        assertTrue(policy.suspendedPackages.isEmpty())
+    }
+
+    @Test
+    fun `unlock that fails part-way keeps locked state for a retry`() {
+        policy.installedPackages.add("dev.focuslock.dummytarget")
+        manager.lock()
+        policy.failingCallPrefix = "setUninstallBlocked"
+
+        val error = runCatching { runBlocking { manager.unlock(PIN) } }.exceptionOrNull()
+
+        assertTrue(error is SecurityException)
+        assertTrue(store.isLocked)
+
+        policy.failingCallPrefix = null
+        unlockWithCorrectPin()
+
+        assertFalse(store.isLocked)
+        assertTrue(policy.suspendedPackages.isEmpty())
+    }
+
     private companion object {
         const val PIN = "482916"
     }
