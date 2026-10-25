@@ -72,6 +72,13 @@ Need hours of uninterrupted deep work or study time? Start a **1 to 6-hour stric
 ### 🔑 5. Tamper-Proof Friend Passcode Protection
 Most app blockers fail because you can easily unlock them during moments of weak willpower. FocusLock solves this by requiring a **Friend Passcode**. Passcodes are hashed irreversibly using salted SHA-256. Hand your phone to a trusted friend or family member to set a secret code that only they know!
 
+> 💡 **Solo Setup Hack (No Friend Needed)**:  
+> Don't have a friend nearby? You can set up protection completely by yourself:
+> 1. Generate a long, complex, random text string (e.g., `X9#kL2!mP8$vQ4`).
+> 2. Paste it into FocusLock as your secret passcode.
+> 3. Save the string in a hard-to-reach location (like a scheduled email to yourself, a locked physical drawer, or on paper in another room) without memorizing it.  
+> Since you can't remember the complex string, you won't be able to bypass your own lock during moments of impulse!
+
 ### 🛡️ 6. Anti-Bypass & Self-Protection (Device Admin Guard)
 FocusLock includes a smart **Settings Guard** powered by Android Device Administrator permissions. While locked, FocusLock automatically blocks access to Android Settings screens that could be used to Force Stop, Clear Data/Cache, Disable Accessibility, or Uninstall the app.
 
@@ -94,7 +101,7 @@ When launching FocusLock for the first time, complete the 3 steps on the setup s
 
 1. **Enable Accessibility Service**: Tap **Enable** $\rightarrow$ Select **FocusLock** under Installed Apps / Downloaded Apps $\rightarrow$ Toggle **ON**.
 2. **Activate Device Admin**: Tap **Activate** $\rightarrow$ Tap **Activate this device admin app** on the Android system screen. *(Prevents force-stopping or uninstalling while locked)*.
-3. **Set Friend Passcode**: Tap **Set Code** $\rightarrow$ Hand your phone to a trusted friend or partner to set a secret 4-to-12 digit PIN code.
+3. **Set Friend Passcode**: Tap **Set Code** $\rightarrow$ Hand your phone to a trusted friend or partner to set a secret 4-to-12 digit PIN code (or use the **Solo Setup Hack** above).
 
 Once setup is complete, all status lights turn green!
 
@@ -104,7 +111,14 @@ Once setup is complete, all status lights turn green!
 
 ### 🔒 Locking & Unlocking
 - **Lock**: Tap **Lock** on the home screen to activate blocking immediately.
-- **Unlock**: Tap **Unlock** and enter your friend's secret PIN code to disable protection.
+- **Unlock**: Tap **Unlock** and enter your friend's secret PIN code (or retrieve your saved random string) to disable protection.
+
+### 💡 Solo Setup Hack (Setting Up Passcode Yourself)
+If you are using FocusLock completely on your own without a friend:
+1. **Create a Complex Passcode**: Generate or type a long, complex, random text string that you won't be able to memorize.
+2. **Set It as Your Code**: Enter this random string when setting your FocusLock code.
+3. **Hide the Code**: Store the string somewhere inaccessible during focus hours (e.g., inside a physical safe, written on paper in another room, or scheduled in an email to arrive tomorrow).  
+This creates the exact same psychological barrier as having a friend set the code!
 
 ### 📋 Customizing Your Block List
 Tap **Block list** under Manage:
@@ -119,14 +133,14 @@ Tap **Daily limits** under Manage:
 ### ☕ Taking a Timed Break
 Need brief access to a blocked app during the day?
 1. Tap **Take a break** on the main screen.
-2. Enter your friend's secret PIN.
+2. Enter your secret PIN (or retrieve your stored string).
 3. Select break duration (e.g., 15 minutes). FocusLock pauses blocking and automatically re-arms when time expires.
 
 ### 🗑️ Complete Removal & Uninstallation
 Because FocusLock prevents unauthorized uninstallation while locked, use the built-in uninstall flow when you want to remove the app:
 1. Open **FocusLock**.
 2. Scroll to the bottom and tap **Remove FocusLock** (highlighted in red).
-3. Enter your friend's secret PIN code.
+3. Enter your secret PIN code.
 4. FocusLock cleanly deactivates Device Admin, resets storage, and opens the system uninstall prompt.
 
 ---
@@ -149,7 +163,7 @@ Because FocusLock prevents unauthorized uninstallation while locked, use the bui
 **A:** When locked, FocusLock's **Settings Guard** inspects system screens in real time. If you open Android Settings to force-stop, clear cache, disable Accessibility, or deactivate Device Admin for FocusLock, the guard immediately closes Settings and sends you home. The only way to remove protection is by entering the friend passcode inside FocusLock.
 
 ### Q: What happens if I forget my friend passcode?
-**A:** FocusLock passcodes are designed to enforce self-control. If you forget your code, your friend who created it must enter it for you. Debug builds include an optional dev bypass for developers testing on emulators.
+**A:** FocusLock passcodes are designed to enforce self-control. If you forget your code, your friend who created it (or your saved backup string) must be used. Debug builds include an optional dev bypass for developers testing on emulators.
 
 ---
 
