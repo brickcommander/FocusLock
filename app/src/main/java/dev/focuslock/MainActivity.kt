@@ -11,6 +11,7 @@ import androidx.activity.viewModels
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import dev.focuslock.ui.BlockListActivity
 import dev.focuslock.ui.MainScreen
 import dev.focuslock.ui.MainViewModel
 import dev.focuslock.ui.theme.FocusLockTheme
@@ -55,6 +56,9 @@ class MainActivity : ComponentActivity() {
                     },
                     onRequestUninstall = {
                         startActivity(Intent(Intent.ACTION_DELETE, "package:$packageName".toUri()))
+                    },
+                    onOpenBlockList = {
+                        startActivity(Intent(this, BlockListActivity::class.java))
                     },
                 )
             }

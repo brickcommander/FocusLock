@@ -42,6 +42,7 @@ fun MainScreen(
     onOpenAccessibilitySettings: () -> Unit,
     onActivateDeviceAdmin: () -> Unit,
     onRequestUninstall: () -> Unit,
+    onOpenBlockList: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -112,6 +113,11 @@ fun MainScreen(
                 ) {
                     Text("Unlock")
                 }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(onClick = onOpenBlockList) {
+                Text(if (state.isLocked) "View block list" else "Edit block list")
             }
 
             if (state.isPinSet) {

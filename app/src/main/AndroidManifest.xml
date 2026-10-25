@@ -5,8 +5,13 @@
     <!-- Normal permission; required for ACTION_DELETE on our own package (targetSdk >= 28). -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
-    <!-- Package visibility (API 30+): launcher and dialer must never be added to the block list. -->
+    <!-- Package visibility (API 30+): apps with a launcher icon for the block-list picker;
+         launcher and dialer so they can never be added to the block list. -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
@@ -38,6 +43,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.BlockListActivity"
+            android:exported="false"
+            android:label="Block list"
+            android:theme="@style/Theme.FocusLock"
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".blocker.FocusAccessibilityService"

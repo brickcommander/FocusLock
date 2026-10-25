@@ -93,7 +93,7 @@ class FocusAccessibilityService : AccessibilityService() {
      * performGlobalAction(HOME) is asynchronous (2 s after boot in the spike) and can land on top of it.
      */
     private fun execute(decision: Decision) {
-        val reason = BlockedReason.describe(decision) ?: return
+        val reason = BlockedReason.describe(decision, (application as FocusApp).container.installedApps::label) ?: return
         startActivities(arrayOf(BlockedActivity.homeIntent(), BlockedActivity.intent(this, reason)))
         debugLog { "blocked $decision" }
     }

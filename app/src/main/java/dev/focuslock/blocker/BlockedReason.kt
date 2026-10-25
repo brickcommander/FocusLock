@@ -16,9 +16,10 @@ object BlockedReason {
 
     const val SETTINGS_SCREEN = "This Settings screen"
 
-    fun describe(decision: Decision): String? = when (decision) {
+    /** @param appLabel looks up the installed app's name for apps the user added. */
+    fun describe(decision: Decision, appLabel: (String) -> String? = { null }): String? = when (decision) {
         Decision.Allow -> null
-        is Decision.BlockApp -> appNames[decision.pkg] ?: decision.pkg
+        is Decision.BlockApp -> appNames[decision.pkg] ?: appLabel(decision.pkg) ?: decision.pkg
         is Decision.BlockSite -> decision.host
         Decision.BlockSettings -> SETTINGS_SCREEN
     }

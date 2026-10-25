@@ -23,6 +23,13 @@ class BlockedReasonTest {
     }
 
     @Test
+    fun `app added by the user shows its installed label`() {
+        val text = BlockedReason.describe(Decision.BlockApp("com.zhiliaoapp.musically")) { "TikTok" }
+
+        assertEquals("TikTok", text)
+    }
+
+    @Test
     fun `unknown app falls back to its package name`() {
         val text = BlockedReason.describe(Decision.BlockApp("com.example.other"))
 
