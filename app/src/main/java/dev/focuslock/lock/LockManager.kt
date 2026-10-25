@@ -11,6 +11,7 @@ class LockManager(
     private val pinManager: PinManager,
     private val setupChecker: SetupChecker,
     private val clock: Clock,
+    private val clearDailyLimits: () -> Unit = {},
 ) {
 
     fun setupStatus(): SetupStatus = SetupStatus(
@@ -98,7 +99,10 @@ class LockManager(
 
     fun isBlocking(): Boolean = store.isLocked || activeFocusSession() != null
 
-    /** Unlocks first, then gives up the admin, so a failure in between never leaves the phone locked. */
+    /**
+     * Unlocks first, then gives up the admin, so a failure in between never leaves the phone locked.
+     * Limits go too: while any exist the Settings guard stays on and would block the uninstall.
+     */
     suspend fun removeCompletely(pin: String): UnlockResult {
         activeFocusSession()?.let { return UnlockResult.InFocusSession(it.untilMs) }
         return when (val result = pinManager.verify(pin)) {
@@ -106,6 +110,7 @@ class LockManager(
                 store.isLocked = false
                 store.breakWindow = null
                 store.focusSession = null
+                clearDailyLimits()
                 setupChecker.deactivateAdmin()
                 UnlockResult.Unlocked
             }

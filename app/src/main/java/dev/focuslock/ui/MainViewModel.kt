@@ -33,6 +33,14 @@ sealed class PinMessage {
     data object Failed : PinMessage()
 }
 
+internal fun VerifyResult.toPinMessage(): PinMessage = when (this) {
+    is VerifyResult.Wrong -> PinMessage.Wrong(remaining)
+    is VerifyResult.LockedOut -> PinMessage.LockedOut(untilMs)
+    VerifyResult.NotSet -> PinMessage.NotSet
+    VerifyResult.Empty -> PinMessage.Empty
+    VerifyResult.Ok -> PinMessage.Failed
+}
+
 data class MainUiState(
     val setup: SetupStatus = SetupStatus(blockerServiceEnabled = false, deviceAdminActive = false, pinSet = false),
     val isLocked: Boolean = false,
@@ -251,14 +259,6 @@ class MainViewModel(
     private fun closeDialog(info: String?) {
         _uiState.update { it.copy(pinDialog = null, pinMessage = null, infoMessage = info) }
         refresh()
-    }
-
-    private fun VerifyResult.toPinMessage(): PinMessage = when (this) {
-        is VerifyResult.Wrong -> PinMessage.Wrong(remaining)
-        is VerifyResult.LockedOut -> PinMessage.LockedOut(untilMs)
-        VerifyResult.NotSet -> PinMessage.NotSet
-        VerifyResult.Empty -> PinMessage.Empty
-        VerifyResult.Ok -> PinMessage.Failed
     }
 
     private fun LockRefusal.message(): String = when (this) {

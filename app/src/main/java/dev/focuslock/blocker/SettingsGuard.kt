@@ -25,8 +25,10 @@ package dev.focuslock.blocker
  * opens the G2 DeviceAdminAdd screen instead. The activation screen (setup) is titled "Activate
  * device admin app?" and says "Activating this admin app will allow…", so it stays allowed.
  *
- * One UI (S25) wordings and packages are NOT recorded yet: they need the same dump on the phone
- * (Step 8) and extra rules here. English only for now (phone language = English).
+ * One UI (S25) texts are NOT recorded. Its device-admin page reached from the notification shade
+ * was not blocked by the exact AOSP sentence, so the G2 rules match words instead of sentences.
+ * The activation page ("Activating this admin app will allow…") contains neither "active" nor
+ * "deactivate", so setup and the "Fix" button keep working. English only (phone language = English).
  *
  * Matching: a needle matches when a screen text equals it, ignoring case and outer whitespace.
  * Exact matching keeps lists that merely mention FocusLock (apps list, accessibility list) allowed.
@@ -34,22 +36,37 @@ package dev.focuslock.blocker
 class SettingsGuard(rules: List<GuardRule> = GuardRules.default) {
 
     private val normalizedRules = rules.map { rule ->
-        rule.allOf.mapTo(HashSet(), ::normalize) to rule.anyOf.mapTo(HashSet(), ::normalize)
+        GuardRule(
+            name = rule.name,
+            allOf = rule.allOf.mapTo(HashSet(), ::normalize),
+            anyOf = rule.anyOf.mapTo(HashSet(), ::normalize),
+            oneTextContainsAll = rule.oneTextContainsAll.mapTo(HashSet(), ::normalize),
+        )
     }
 
     fun isDangerous(screenTexts: List<String>): Boolean {
         if (screenTexts.isEmpty()) return false
         val texts = screenTexts.mapTo(HashSet(), ::normalize)
-        return normalizedRules.any { (allOf, anyOf) ->
-            texts.containsAll(allOf) && (anyOf.isEmpty() || anyOf.any { it in texts })
+        return normalizedRules.any { rule ->
+            texts.containsAll(rule.allOf) &&
+                (rule.anyOf.isEmpty() || rule.anyOf.any { it in texts }) &&
+                (rule.oneTextContainsAll.isEmpty() || texts.any { text -> rule.oneTextContainsAll.all { it in text } })
         }
     }
 
     private fun normalize(text: String): String = text.trim().lowercase()
 }
 
-/** Matches when the screen contains ALL of `allOf` and ANY of `anyOf` (case-insensitive). */
-data class GuardRule(val name: String, val allOf: Set<String>, val anyOf: Set<String>)
+/**
+ * Matches when the screen contains ALL of `allOf`, ANY of `anyOf`, and one text that contains
+ * every word of `oneTextContainsAll` (all case-insensitive; empty sets always match).
+ */
+data class GuardRule(
+    val name: String,
+    val allOf: Set<String>,
+    val anyOf: Set<String>,
+    val oneTextContainsAll: Set<String> = emptySet(),
+)
 
 object GuardRules {
     private const val APP = "FocusLock"
@@ -67,6 +84,14 @@ object GuardRules {
             allOf = setOf(APP),
             anyOf = setOf("Deactivate this device admin app", "Deactivate & uninstall", ACTIVE_ADMIN_TEXT),
         ),
+        GuardRule("G2 device-admin-deactivate", allOf = setOf(APP), anyOf = emptySet(), oneTextContainsAll = setOf("deactivate")),
+        GuardRule(
+            "G2 device-admin-status",
+            allOf = emptySet(),
+            anyOf = emptySet(),
+            oneTextContainsAll = setOf(APP, "admin", "active"),
+        ),
+        GuardRule("G2 device-admin-list", allOf = setOf(APP), anyOf = setOf("Device admin apps", "Device administrators")),
         GuardRule("G3 accessibility-detail", allOf = setOf(APP), anyOf = setOf("Use FocusLock", "FocusLock shortcut")),
         GuardRule("G3 accessibility-off-dialog", allOf = setOf("Turn off FocusLock?"), anyOf = setOf("Turn off")),
         GuardRule(

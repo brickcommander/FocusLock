@@ -62,22 +62,73 @@ class BlockDeciderFocusAndLimitsTest {
     }
 
     @Test
-    fun `app without allowance today stays blocked`() {
+    fun `blocked app without a limit stays blocked`() {
         val decision = decider.decide(event(APP), isLocked = true, remainingMs = { null })
 
         assertEquals(Decision.BlockApp(APP), decision)
     }
 
     @Test
-    fun `allowance only matters while locked`() {
-        assertEquals(Decision.Allow, decider.decide(event(APP), isLocked = false, remainingMs = { 0L }))
+    fun `limits apply while unlocked`() {
+        assertEquals(Decision.LimitReached(APP), decider.decide(event(APP), isLocked = false, remainingMs = { 0L }))
+        assertEquals(
+            Decision.AllowTimed(APP, MINUTE),
+            decider.decide(event(APP), isLocked = false, remainingMs = { MINUTE }),
+        )
     }
 
     @Test
-    fun `allowance doesn't apply to apps that aren't blocked`() {
-        val decision = decider.decide(event("com.whatsapp"), isLocked = true, remainingMs = { 0L })
+    fun `limits apply to apps that aren't on the block list`() {
+        assertEquals(Decision.LimitReached(OTHER), decider.decide(event(OTHER), isLocked = true, remainingMs = { 0L }))
+        assertEquals(Decision.LimitReached(OTHER), decider.decide(event(OTHER), isLocked = false, remainingMs = { 0L }))
+    }
 
-        assertEquals(Decision.Allow, decision)
+    @Test
+    fun `unlocked app without a limit is allowed`() {
+        assertEquals(Decision.Allow, decider.decide(event(APP), isLocked = false, remainingMs = { null }))
+    }
+
+    @Test
+    fun `a break pauses limits and doesn't count time`() {
+        val usedUp = decider.decide(event(OTHER), isLocked = true, isOnBreak = true, remainingMs = { 0L })
+        val timeLeft = decider.decide(event(OTHER), isLocked = true, isOnBreak = true, remainingMs = { MINUTE })
+
+        assertEquals(Decision.Allow, usedUp)
+        assertEquals(Decision.Allow, timeLeft)
+    }
+
+    @Test
+    fun `focus session blocks limited apps that aren't on the block list`() {
+        val decision = decider.decide(event(OTHER), isLocked = false, isInFocus = true, remainingMs = { 30 * MINUTE })
+
+        assertEquals(Decision.BlockApp(OTHER), decision)
+    }
+
+    @Test
+    fun `a limited browser still blocks sites while locked`() {
+        val decision = decider.decide(
+            event(BlockList.CHROME, url = "m.youtube.com/watch"),
+            isLocked = true,
+            remainingMs = { 10 * MINUTE },
+        )
+
+        assertEquals(Decision.BlockSite("m.youtube.com"), decision)
+    }
+
+    @Test
+    fun `settings guard is on while unlocked when limits exist`() {
+        val texts = listOf("FocusLock", "Use FocusLock")
+
+        assertTrue(decider.needsScreenTexts(SETTINGS, isLocked = false, hasLimits = true))
+        assertFalse(decider.needsScreenTexts(SETTINGS, isLocked = false, hasLimits = false))
+        assertEquals(Decision.BlockSettings, decider.decide(event(SETTINGS, texts = texts), isLocked = false, hasLimits = true))
+        assertEquals(Decision.Allow, decider.decide(event(SETTINGS, texts = texts), isLocked = false, hasLimits = false))
+    }
+
+    @Test
+    fun `settings and never-blocked apps can't be limited`() {
+        assertEquals(Decision.Allow, decider.decide(event(SETTINGS), isLocked = false, remainingMs = { 0L }, hasLimits = true))
+        assertEquals(Decision.Allow, decider.decide(event(BlockList.SELF), isLocked = false, remainingMs = { 0L }))
     }
 
     @Test
@@ -91,13 +142,15 @@ class BlockDeciderFocusAndLimitsTest {
     @Test
     fun `limit reached explains when it resets`() {
         assertEquals(
-            "Instagram: daily limit reached. Resets at midnight.",
+            "Instagram: no time left today. Resets at midnight.",
             BlockedReason.describe(Decision.LimitReached(APP)),
         )
     }
 
     private companion object {
         const val APP = "com.instagram.android"
+        const val OTHER = "com.whatsapp"
+        const val SETTINGS = "com.android.settings"
         const val MINUTE = 60_000L
     }
 }

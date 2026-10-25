@@ -149,6 +149,20 @@ class LockManagerTest {
     }
 
     @Test
+    fun `removeCompletely clears daily limits, a wrong code keeps them`() = runTest {
+        var cleared = 0
+        val pinManager = newPinManager().apply { setPin(PIN) }
+        val limitsManager = LockManager(store, pinManager, setup, clock, clearDailyLimits = { cleared++ })
+
+        limitsManager.removeCompletely("wrong00000")
+        val afterWrong = cleared
+        limitsManager.removeCompletely(PIN)
+
+        assertEquals(0, afterWrong)
+        assertEquals(1, cleared)
+    }
+
+    @Test
     fun `startBreak with correct pin opens a window of the chosen hours and stays locked`() = runTest {
         manager.lock()
         clock.now = 10_000L

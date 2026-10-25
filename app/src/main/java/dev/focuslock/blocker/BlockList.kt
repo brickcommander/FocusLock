@@ -37,5 +37,6 @@ object BlockList {
     val settingsPackages: Set<String> = setOf("com.android.settings")
 
     /** The service only receives events from these packages (set at runtime via setServiceInfo). */
-    fun watchedPackages(rules: BlockRules): Set<String> = rules.apps + browsers.keys + settingsPackages
+    fun watchedPackages(rules: BlockRules, limited: Set<String> = emptySet()): Set<String> =
+        rules.apps + limited + browsers.keys + settingsPackages
 }

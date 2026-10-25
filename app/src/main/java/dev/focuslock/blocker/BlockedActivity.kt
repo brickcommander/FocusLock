@@ -14,19 +14,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import dev.focuslock.ui.PrimaryButton
 import dev.focuslock.ui.theme.FocusLockTheme
+import dev.focuslock.ui.theme.LocalStatusColors
 
 /**
  * "Blocked" screen.
@@ -52,52 +49,41 @@ class BlockedActivity : ComponentActivity() {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFF0A0A0A))
-                        .padding(horizontal = 32.dp),
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(horizontal = 40.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = "Blocked",
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Light,
-                        letterSpacing = 2.sp,
+                        text = "NOT RIGHT NOW",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = LocalStatusColors.current.locked,
                     )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Blocked",
+                        style = MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = reason.value,
-                        color = Color(0xFF9CA3AF),
-                        fontSize = 15.sp,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
-
-                    Spacer(modifier = Modifier.height(48.dp))
-
-                    Button(
+                    Spacer(modifier = Modifier.height(56.dp))
+                    PrimaryButton(
+                        text = if (isSiteBlock) "Go back" else "OK",
                         onClick = ::dismiss,
-                        modifier = Modifier.fillMaxWidth(0.5f).height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF262626),
-                            contentColor = Color.White,
-                        ),
-                    ) {
-                        Text(
-                            text = if (isSiteBlock) "Go back" else "OK",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-
+                        modifier = Modifier.fillMaxWidth(0.6f),
+                    )
                     if (isSiteBlock) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = "Close or switch the tab to continue browsing.",
-                            color = Color(0xFF525252),
-                            fontSize = 12.sp,
+                            text = "Close or switch the tab to keep browsing.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
                             textAlign = TextAlign.Center,
                         )
                     }

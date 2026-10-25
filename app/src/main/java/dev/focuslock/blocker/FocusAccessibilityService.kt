@@ -37,9 +37,11 @@ import android.os.SystemClock as AndroidClock
  *    "Deactivate" buttons, "Clear storage", "Automatic date and time") from non-tool services.
  *    Record Settings texts from the debug log "settings texts=[...]", not from uiautomator.
  * 7. A Settings screen opened from the notification shade arrives while the shade still owns the
- *    active window, so rootInActiveWindow is the shade. Texts are read from the window of the
- *    event's own package instead, and Settings is re-checked shortly after (static screens such as
- *    the device-admin page send no further events).
+ *    active window, so rootInActiveWindow is the shade, and the screen under the shade is often
+ *    missing from `windows` too. Static screens such as the device-admin page send no event when
+ *    the shade closes. So texts are read from the event's own window, and while the guard is on,
+ *    Settings is re-read every SETTINGS_WATCH_MS while it is visible, and for SETTINGS_HIDDEN_MS
+ *    after it was last seen (covered by the shade).
  */
 class FocusAccessibilityService : AccessibilityService() {
 
@@ -61,18 +63,26 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private val breakListener: (BreakWindow?) -> Unit = { window -> breakWindow = window }
 
+    @Volatile
+    private var limitedPackages: Set<String> = emptySet()
+
     private val rulesListener: (BlockRules) -> Unit = { newRules ->
         rules = newRules
-        updatePackageFilter(newRules)
+        updatePackageFilter()
+    }
+
+    private val limitsListener: () -> Unit = {
+        limitedPackages = container.dailyLimits.limits.keys
+        updatePackageFilter()
     }
 
     private val container: AppContainer
         get() = (application as FocusApp).container
 
-    // ── Settings re-check ──
-    private var lastSettingsPkg: String? = null
-    private val settingsRecheck = Runnable { recheckSettings() }
-    private val settingsLateRecheck = Runnable { recheckSettings() }
+    // ── Settings watch ──
+    private var watchedSettingsPkg: String? = null
+    private var settingsLastSeenMs = 0L
+    private val settingsWatch = Runnable { onSettingsWatch() }
 
     // ── Daily-allowance timer ──
     private var timedPkg: String? = null
@@ -88,7 +98,9 @@ class FocusAccessibilityService : AccessibilityService() {
         store.addBreakListener(breakListener)
         rules = container.blockRulesStore.rules
         container.blockRulesStore.addListener(rulesListener)
-        updatePackageFilter(rules)
+        limitedPackages = container.dailyLimits.limits.keys
+        container.limitsStore.addListener(limitsListener)
+        updatePackageFilter()
         debugLog { "connected, isLocked=$isLocked" }
         // After boot (or re-enable) a blocked app may already be in front and send no new event.
         safely { foregroundPackage()?.let { handle(it) } }
@@ -98,27 +110,35 @@ class FocusAccessibilityService : AccessibilityService() {
         val pkg = event.packageName?.toString() ?: return
         val isWindowStateChange = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
         debugLog { "event pkg=$pkg type=${event.eventType} class=${event.className}" }
-        safely { handle(pkg, isWindowStateChange) }
+        safely { handle(pkg, isWindowStateChange, eventRoot = { eventWindowRoot(event, pkg) }) }
     }
 
-    private fun handle(pkg: String, isWindowStateChange: Boolean = true, fromRecheck: Boolean = false) {
+    private fun handle(
+        pkg: String,
+        isWindowStateChange: Boolean = true,
+        eventRoot: () -> AccessibilityNodeInfo? = { null },
+    ) {
         val locked = isLocked
         val inFocus = container.lockManager.activeFocusSession() != null
         val onBreak = !inFocus && breakWindow?.isActive(SystemClock.nowMs()) == true
+        val hasLimits = limitedPackages.isNotEmpty()
+        val root by lazy { rootFor(pkg) ?: eventRoot() }
         val urlBarText =
-            if (decider.needsUrlBar(pkg, locked, onBreak, inFocus)) BrowserUrlReader.read(rootFor(pkg), pkg) else null
-        val needsTexts = decider.needsScreenTexts(pkg, locked, inFocus)
+            if (decider.needsUrlBar(pkg, locked, onBreak, inFocus)) BrowserUrlReader.read(root, pkg) else null
+        val needsTexts = decider.needsScreenTexts(pkg, locked, inFocus, hasLimits)
         val screenTexts =
-            if (needsTexts && scanThrottle.shouldScan(isWindowStateChange)) ScreenTextReader.read(rootFor(pkg)) else emptyList()
+            if (needsTexts && scanThrottle.shouldScan(isWindowStateChange)) ScreenTextReader.read(root) else emptyList()
         if (screenTexts.isNotEmpty()) debugLog { "settings texts=$screenTexts" }
 
         val screenEvent = ScreenEvent(packageName = pkg, urlBarText = urlBarText, screenTexts = screenTexts)
-        val decision = decider.decide(screenEvent, locked, rules, onBreak, inFocus, container.dailyLimits::remainingMs)
+        val decision =
+            decider.decide(screenEvent, locked, rules, onBreak, inFocus, container.dailyLimits::remainingMs, hasLimits)
 
         if (decision is Decision.AllowTimed) track(decision.pkg, decision.remainingMs)
         else if (pkg == timedPkg) stopTracking()
 
-        if (needsTexts && !fromRecheck && decision == Decision.Allow) scheduleSettingsRecheck(pkg)
+        if (needsTexts && decision == Decision.Allow) watchSettings(pkg, seenNow = root != null)
+        else if (pkg == watchedSettingsPkg) stopSettingsWatch()
         if (throttle.shouldFire(decision)) execute(decision)
     }
 
@@ -150,21 +170,34 @@ class FocusAccessibilityService : AccessibilityService() {
             .firstOrNull { it.packageName?.toString() == pkg }
     }
 
+    /** The window the event came from; can be found even while the shade covers it. */
+    private fun eventWindowRoot(event: AccessibilityEvent, pkg: String): AccessibilityNodeInfo? =
+        event.source?.window?.root?.takeIf { it.packageName?.toString() == pkg }
+
     private fun foregroundPackage(): String? = rootInActiveWindow?.packageName?.toString()
 
-    // ── Settings re-check ──
+    // ── Settings watch ──
 
-    private fun scheduleSettingsRecheck(pkg: String) {
-        lastSettingsPkg = pkg
-        handler.removeCallbacks(settingsRecheck)
-        handler.removeCallbacks(settingsLateRecheck)
-        handler.postDelayed(settingsRecheck, SETTINGS_RECHECK_MS)
-        handler.postDelayed(settingsLateRecheck, SETTINGS_LATE_RECHECK_MS)
+    private fun watchSettings(pkg: String, seenNow: Boolean) {
+        val now = AndroidClock.elapsedRealtime()
+        if (watchedSettingsPkg != pkg) settingsLastSeenMs = now
+        watchedSettingsPkg = pkg
+        if (seenNow) settingsLastSeenMs = now
+        if (now - settingsLastSeenMs > SETTINGS_HIDDEN_MS) {
+            stopSettingsWatch()
+            return
+        }
+        if (!handler.hasCallbacks(settingsWatch)) handler.postDelayed(settingsWatch, SETTINGS_WATCH_MS)
     }
 
-    private fun recheckSettings() = safely {
-        val pkg = lastSettingsPkg ?: return@safely
-        if (rootFor(pkg) != null) handle(pkg, isWindowStateChange = true, fromRecheck = true)
+    private fun onSettingsWatch() = safely {
+        val pkg = watchedSettingsPkg ?: return@safely
+        handle(pkg, isWindowStateChange = true)
+    }
+
+    private fun stopSettingsWatch() {
+        watchedSettingsPkg = null
+        handler.removeCallbacks(settingsWatch)
     }
 
     // ── Daily-allowance timer ──
@@ -208,10 +241,10 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun isInteractive(): Boolean = getSystemService(PowerManager::class.java)?.isInteractive != false
 
-    /** The XML packageNames are only the defaults; the user's list replaces them at runtime. */
-    private fun updatePackageFilter(rules: BlockRules) = safely {
+    /** The XML packageNames are only the defaults; the user's lists replace them at runtime. */
+    private fun updatePackageFilter() = safely {
         val info = serviceInfo ?: return@safely
-        info.packageNames = BlockList.watchedPackages(rules).toTypedArray()
+        info.packageNames = BlockList.watchedPackages(rules, limitedPackages).toTypedArray()
         serviceInfo = info
         debugLog { "watching ${info.packageNames.size} packages" }
     }
@@ -234,6 +267,7 @@ class FocusAccessibilityService : AccessibilityService() {
         container.lockStateStore.removeListener(lockListener)
         container.lockStateStore.removeBreakListener(breakListener)
         container.blockRulesStore.removeListener(rulesListener)
+        container.limitsStore.removeListener(limitsListener)
     }
 
     /**
@@ -254,8 +288,8 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private companion object {
         const val TAG = "FocusLock"
-        const val SETTINGS_RECHECK_MS = 700L
-        const val SETTINGS_LATE_RECHECK_MS = 2_000L
+        const val SETTINGS_WATCH_MS = 500L
+        const val SETTINGS_HIDDEN_MS = 15_000L
         const val TICK_MS = 5_000L
         const val MIN_TICK_MS = 1_000L
         const val MAX_COUNTED_GAP_MS = 2 * TICK_MS

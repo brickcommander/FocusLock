@@ -3,8 +3,8 @@ package dev.focuslock.limits
 import java.time.DayOfWeek
 
 /**
- * How long a blocked app may be used on each day of the week, in minutes (index 0 = Monday).
- * 0 means no allowance that day: the app stays blocked like any other blocked app.
+ * How long an app may be used on each day of the week, in minutes (index 0 = Monday).
+ * 0 means no time at all that day: the app is blocked all day.
  */
 data class DailyLimit(val minutes: List<Int>) {
 
@@ -31,7 +31,7 @@ data class DailyLimit(val minutes: List<Int>) {
 
         fun everyDay(value: Int): DailyLimit = DailyLimit(List(DAYS) { value.coerceIn(0, MAX_MINUTES) })
 
-        /** Corrupt or foreign data becomes null, which keeps the app fully blocked. */
+        /** Corrupt or foreign data becomes null (the caller then treats the app as blocked all day). */
         fun decode(raw: String?): DailyLimit? {
             val parts = raw?.split(',') ?: return null
             if (parts.size != DAYS) return null

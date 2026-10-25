@@ -190,6 +190,35 @@ class SettingsGuardTest {
     }
 
     @Test
+    fun `device admin page with other wording is dangerous`() {
+        // One UI-style status sentence without "the app", and no app-name header.
+        val texts = listOf("Device admin app", "This admin app is active and allows FocusLock to perform the following operations:")
+
+        assertTrue(guard.isDangerous(texts))
+    }
+
+    @Test
+    fun `any deactivate button on a FocusLock screen is dangerous`() {
+        assertTrue(guard.isDangerous(listOf("FocusLock", "Deactivate")))
+        assertTrue(guard.isDangerous(listOf("FocusLock", "Deactivate and uninstall")))
+    }
+
+    @Test
+    fun `deactivate button for another admin is not dangerous`() {
+        assertFalse(guard.isDangerous(listOf("Find Hub", "Deactivate", "Device admin app")))
+    }
+
+    @Test
+    fun `device admin list that shows FocusLock is dangerous`() {
+        assertTrue(guard.isDangerous(listOf("Device admin apps", "Find Hub", "FocusLock")))
+    }
+
+    @Test
+    fun `security page that only counts admins is not dangerous`() {
+        assertFalse(guard.isDangerous(listOf("Other security settings", "Device admin apps", "1 active app")))
+    }
+
+    @Test
     fun `empty screen is not dangerous`() {
         assertFalse(guard.isDangerous(emptyList()))
     }

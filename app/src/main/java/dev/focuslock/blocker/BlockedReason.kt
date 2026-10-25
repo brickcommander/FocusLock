@@ -20,7 +20,7 @@ object BlockedReason {
     fun describe(decision: Decision, appLabel: (String) -> String? = { null }): String? = when (decision) {
         Decision.Allow, is Decision.AllowTimed -> null
         is Decision.BlockApp -> appName(decision.pkg, appLabel)
-        is Decision.LimitReached -> "${appName(decision.pkg, appLabel)}: daily limit reached. Resets at midnight."
+        is Decision.LimitReached -> "${appName(decision.pkg, appLabel)}: no time left today. Resets at midnight."
         is Decision.BlockSite -> decision.host
         Decision.BlockSettings -> SETTINGS_SCREEN
     }

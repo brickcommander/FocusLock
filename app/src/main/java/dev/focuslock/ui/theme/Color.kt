@@ -2,29 +2,40 @@ package dev.focuslock.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Neutral grays — the backbone
-val Neutral950 = Color(0xFF0A0A0A)
-val Neutral900 = Color(0xFF171717)
-val Neutral850 = Color(0xFF1F1F1F)
-val Neutral800 = Color(0xFF262626)
-val Neutral700 = Color(0xFF404040)
-val Neutral600 = Color(0xFF525252)
-val Neutral500 = Color(0xFF737373)
-val Neutral400 = Color(0xFF9CA3AF)
-val Neutral300 = Color(0xFFD1D5DB)
-val Neutral200 = Color(0xFFE5E7EB)
-val Neutral100 = Color(0xFFF3F4F6)
-val Neutral50 = Color(0xFFF9FAFB)
+// Light: warm paper and ink
+val Paper = Color(0xFFF7F6F3)
+val PaperRaised = Color(0xFFFFFFFF)
+val PaperSunken = Color(0xFFEFEDE8)
+val Hairline = Color(0xFFE4E1DA)
+val Ink = Color(0xFF16161A)
+val InkMuted = Color(0xFF6B6A66)
+val InkFaint = Color(0xFFA19F99)
 
-// Accent — desaturated indigo (sophisticated, not playful)
-val Indigo = Color(0xFF818CF8)
-val IndigoDark = Color(0xFF6366F1)
-val IndigoMuted = Color(0xFF4F46E5)
+// Dark: deep graphite
+val Graphite = Color(0xFF0F0F11)
+val GraphiteRaised = Color(0xFF18181B)
+val GraphiteSunken = Color(0xFF212125)
+val GraphiteHairline = Color(0xFF2A2A2F)
+val Chalk = Color(0xFFF2F1EE)
+val ChalkMuted = Color(0xFF9D9B96)
+val ChalkFaint = Color(0xFF64635F)
 
-// Semantic — muted, not alarming
-val StatusLocked = Color(0xFFEF4444)
-val StatusLockedMuted = Color(0xFFDC2626)
-val StatusUnlocked = Color(0xFF22C55E)
-val StatusUnlockedMuted = Color(0xFF16A34A)
-val ErrorRed = Color(0xFFEF4444)
-val WarningAmber = Color(0xFFF59E0B)
+// One calm accent, deep sage
+val Sage = Color(0xFF2F6B57)
+val SageLight = Color(0xFF7FB8A2)
+val SageTintLight = Color(0xFFE3EEE9)
+val SageTintDark = Color(0xFF1A2A24)
+
+// Status
+val Clay = Color(0xFFB4533C)
+val ClayLight = Color(0xFFE08A73)
+val ClayTintLight = Color(0xFFF6E5DF)
+val ClayTintDark = Color(0xFF2E1C17)
+val Dusk = Color(0xFF4A4FA8)
+val DuskLight = Color(0xFF9CA0EA)
+val DuskTintLight = Color(0xFFE6E7F6)
+val DuskTintDark = Color(0xFF1D1E33)
+
+// Kept for existing callers
+val StatusLocked = Clay
+val StatusUnlocked = Sage

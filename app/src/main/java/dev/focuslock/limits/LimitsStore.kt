@@ -9,8 +9,9 @@ import java.util.concurrent.CopyOnWriteArraySet
 interface LimitsStoreContract {
     val limits: Map<String, DailyLimit>
 
-    /** An empty limit removes the entry (the app is simply blocked). */
     fun put(pkg: String, limit: DailyLimit)
+    fun remove(pkg: String)
+    fun clear()
 
     fun addListener(listener: () -> Unit)
     fun removeListener(listener: () -> Unit)
@@ -38,15 +39,20 @@ class LimitsStore(context: Context) : LimitsStoreContract {
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
     }
 
+    /** A corrupt entry reads as "no time any day": dropping it would quietly lift the limit. */
     override val limits: Map<String, DailyLimit>
-        get() = prefs.all.mapNotNull { (pkg, raw) ->
-            DailyLimit.decode(raw as? String)?.let { pkg to it }
-        }.toMap()
+        get() = prefs.all.mapValues { (_, raw) -> DailyLimit.decode(raw as? String) ?: DailyLimit.NONE }
 
     override fun put(pkg: String, limit: DailyLimit) {
-        prefs.edit {
-            if (limit.isEmpty) remove(pkg) else putString(pkg, limit.encode())
-        }
+        prefs.edit { putString(pkg, limit.encode()) }
+    }
+
+    override fun remove(pkg: String) {
+        prefs.edit { remove(pkg) }
+    }
+
+    override fun clear() {
+        prefs.edit { clear() }
     }
 
     override fun addListener(listener: () -> Unit) {

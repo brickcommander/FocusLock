@@ -33,7 +33,7 @@ class BlockListActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FocusLockTheme {
-                BlockListScreen(viewModel)
+                BlockListScreen(viewModel, onBack = ::finish)
             }
         }
     }

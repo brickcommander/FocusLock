@@ -5,6 +5,7 @@ import dev.focuslock.apps.InstalledApps
 import dev.focuslock.blocker.BlockListEditor
 import dev.focuslock.blocker.BlockRulesStore
 import dev.focuslock.limits.DailyLimits
+import dev.focuslock.limits.LimitsEditor
 import dev.focuslock.limits.LimitsStore
 import dev.focuslock.limits.UsageStore
 import dev.focuslock.lock.LockManager
@@ -23,8 +24,14 @@ class AppContainer(context: Context) {
         BlockListEditor(blockRulesStore, lockStateStore, installedApps::protectedPackages)
     val pinManager: PinManager = PinManager(PinStore(context), PinHasher(), SystemClock)
     val setupChecker: AndroidSetupChecker = AndroidSetupChecker(context)
-    val lockManager: LockManager = LockManager(lockStateStore, pinManager, setupChecker, SystemClock)
     val limitsStore: LimitsStore = LimitsStore(context)
-    val dailyLimits: DailyLimits =
-        DailyLimits(limitsStore, UsageStore(context), SystemClock, isBlocking = lockManager::isBlocking)
+    val lockManager: LockManager =
+        LockManager(lockStateStore, pinManager, setupChecker, SystemClock, clearDailyLimits = limitsStore::clear)
+    val dailyLimits: DailyLimits = DailyLimits(limitsStore, UsageStore(context), SystemClock)
+    val limitsEditor: LimitsEditor = LimitsEditor(
+        store = limitsStore,
+        pinManager = pinManager,
+        isInFocus = { lockManager.activeFocusSession() != null },
+        protectedPackages = installedApps::protectedPackages,
+    )
 }

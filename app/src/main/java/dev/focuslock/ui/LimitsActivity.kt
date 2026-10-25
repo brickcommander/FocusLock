@@ -21,9 +21,10 @@ class LimitsActivity : ComponentActivity() {
             initializer {
                 LimitsViewModel(
                     dailyLimits = container.dailyLimits,
-                    rulesStore = container.blockRulesStore,
+                    editor = container.limitsEditor,
                     appSource = container.installedApps,
-                    isBlocking = container.lockManager::isBlocking,
+                    isPinSet = container.pinManager::isSet,
+                    isInFocus = { container.lockManager.activeFocusSession() != null },
                 )
             }
         }
@@ -34,7 +35,7 @@ class LimitsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FocusLockTheme {
-                LimitsScreen(viewModel)
+                LimitsScreen(viewModel, onBack = ::finish)
             }
         }
     }

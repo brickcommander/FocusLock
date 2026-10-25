@@ -9,7 +9,17 @@ class FakeLimitsStore : LimitsStoreContract {
     override val limits: Map<String, DailyLimit> get() = map.toMap()
 
     override fun put(pkg: String, limit: DailyLimit) {
-        if (limit.isEmpty) map.remove(pkg) else map[pkg] = limit
+        map[pkg] = limit
+        listeners.toList().forEach { it() }
+    }
+
+    override fun remove(pkg: String) {
+        map.remove(pkg)
+        listeners.toList().forEach { it() }
+    }
+
+    override fun clear() {
+        map.clear()
         listeners.toList().forEach { it() }
     }
 
