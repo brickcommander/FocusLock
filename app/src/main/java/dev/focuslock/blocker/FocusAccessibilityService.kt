@@ -66,6 +66,10 @@ class FocusAccessibilityService : AccessibilityService() {
     @Volatile
     private var limitedPackages: Set<String> = emptySet()
 
+    /** Also checked in-process: the XML lists no packages, so events can arrive before the filter is set. */
+    @Volatile
+    private var watchedSet: Set<String> = emptySet()
+
     private val rulesListener: (BlockRules) -> Unit = { newRules ->
         rules = newRules
         updatePackageFilter()
@@ -108,6 +112,8 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val pkg = event.packageName?.toString() ?: return
+        if (pkg !in watchedSet) return
+        safely { container.lockManager.tickEmergency() }
         val isWindowStateChange = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
         debugLog { "event pkg=$pkg type=${event.eventType} class=${event.className}" }
         safely { handle(pkg, isWindowStateChange, eventRoot = { eventWindowRoot(event, pkg) }) }
@@ -241,12 +247,14 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun isInteractive(): Boolean = getSystemService(PowerManager::class.java)?.isInteractive != false
 
-    /** The XML packageNames are only the defaults; the user's lists replace them at runtime. */
+    /** The user's lists decide which packages send events at all. */
     private fun updatePackageFilter() = safely {
+        val pkgs = BlockList.watchedPackages(rules, limitedPackages)
+        watchedSet = pkgs
         val info = serviceInfo ?: return@safely
-        info.packageNames = BlockList.watchedPackages(rules, limitedPackages).toTypedArray()
+        info.packageNames = pkgs.toTypedArray()
         serviceInfo = info
-        debugLog { "watching ${info.packageNames.size} packages" }
+        debugLog { "watching ${pkgs.size} packages" }
     }
 
     override fun onInterrupt() = Unit

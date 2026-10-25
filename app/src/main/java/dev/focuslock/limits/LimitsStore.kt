@@ -30,14 +30,8 @@ class LimitsStore(context: Context) : LimitsStoreContract {
 
     private val listeners = CopyOnWriteArraySet<() -> Unit>()
 
-    // SharedPreferences only holds listeners weakly, so this field keeps it alive.
-    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-        listeners.forEach { it() }
-    }
-
-    init {
-        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
-    }
+    // Notified from the writers: an OnSharedPreferenceChangeListener is only held weakly and its
+    // keep-alive field is stripped by R8, so release builds stopped seeing edits (see LockStateStore).
 
     /** A corrupt entry reads as "no time any day": dropping it would quietly lift the limit. */
     override val limits: Map<String, DailyLimit>
@@ -45,15 +39,20 @@ class LimitsStore(context: Context) : LimitsStoreContract {
 
     override fun put(pkg: String, limit: DailyLimit) {
         prefs.edit { putString(pkg, limit.encode()) }
+        notifyListeners()
     }
 
     override fun remove(pkg: String) {
         prefs.edit { remove(pkg) }
+        notifyListeners()
     }
 
     override fun clear() {
         prefs.edit { clear() }
+        notifyListeners()
     }
+
+    private fun notifyListeners() = listeners.forEach { it() }
 
     override fun addListener(listener: () -> Unit) {
         listeners.add(listener)

@@ -32,6 +32,9 @@ class FakeLockStateStore : LockStateStoreContract {
             focusListeners.toList().forEach { it(value) }
         }
 
+    override var emergencyUnlockAtMs: Long = 0L
+    override var emergencyRelockAtMs: Long = 0L
+
     override fun addListener(listener: (Boolean) -> Unit) {
         listeners.add(listener)
     }

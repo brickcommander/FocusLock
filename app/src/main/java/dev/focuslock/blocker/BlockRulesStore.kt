@@ -20,17 +20,8 @@ class BlockRulesStore(context: Context) : BlockRulesStoreContract {
 
     private val listeners = CopyOnWriteArraySet<(BlockRules) -> Unit>()
 
-    // SharedPreferences only holds listeners weakly, so this field keeps it alive.
-    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == KEY_APPS || key == KEY_SITES) {
-            val current = rules
-            listeners.forEach { it(current) }
-        }
-    }
-
-    init {
-        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
-    }
+    // Notified from the setter: an OnSharedPreferenceChangeListener is only held weakly and its
+    // keep-alive field is stripped by R8, so release builds stopped seeing edits (see LockStateStore).
 
     override var rules: BlockRules
         get() = BlockRules(
@@ -38,10 +29,12 @@ class BlockRulesStore(context: Context) : BlockRulesStoreContract {
             sites = prefs.getStringSet(KEY_SITES, null)?.toSet() ?: BlockList.sites,
         )
         set(value) {
+            val changed = value != rules
             prefs.edit {
                 putStringSet(KEY_APPS, value.apps.toSet())
                 putStringSet(KEY_SITES, value.sites.toSet())
             }
+            if (changed) listeners.forEach { it(value) }
         }
 
     override fun addListener(listener: (BlockRules) -> Unit) {

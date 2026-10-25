@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.focuslock.lock.BreakResult
 import dev.focuslock.lock.FocusResult
+import dev.focuslock.lock.EmergencyResult
+import dev.focuslock.lock.EmergencyState
 import dev.focuslock.lock.LockManager
 import dev.focuslock.lock.LockRefusal
 import dev.focuslock.lock.LockResult
@@ -57,6 +59,8 @@ data class MainUiState(
     /** End of the focus session that is running right now, else null. */
     val focusUntilMs: Long? = null,
     val showFocusDialog: Boolean = false,
+    val showEmergencyConfirm: Boolean = false,
+    val emergency: EmergencyState? = null,
 ) {
     val isPinSet: Boolean get() = setup.pinSet
     val isInFocus: Boolean get() = focusUntilMs != null
@@ -79,6 +83,7 @@ class MainViewModel(
     }
 
     fun refresh() {
+        lockManager.tickEmergency()
         _uiState.update {
             it.copy(
                 setup = lockManager.setupStatus(),
@@ -86,6 +91,7 @@ class MainViewModel(
                 lastAppliedMs = lockStateStore.lastAppliedEpochMs,
                 breakUntilMs = lockManager.activeBreak()?.untilMs,
                 focusUntilMs = lockManager.activeFocusSession()?.untilMs,
+                emergency = lockManager.activeEmergency(),
             )
         }
     }
@@ -224,6 +230,32 @@ class MainViewModel(
             is FocusResult.Refused -> result.reason.message()
         }
         _uiState.update { it.copy(showFocusDialog = false, infoMessage = info) }
+        refresh()
+    }
+
+    // ── Emergency cooldown unlock ──
+
+    fun openEmergencyConfirm() {
+        _uiState.update { it.copy(showEmergencyConfirm = true) }
+    }
+
+    fun dismissEmergencyConfirm() {
+        _uiState.update { it.copy(showEmergencyConfirm = false) }
+    }
+
+    fun confirmEmergencyUnlock() {
+        val info = when (val result = lockManager.requestEmergencyUnlock()) {
+            is EmergencyResult.Started -> null
+            EmergencyResult.NotLocked -> "Not locked right now"
+            EmergencyResult.InFocusSession -> FOCUS_REFUSAL
+            EmergencyResult.AlreadyPending -> "Emergency unlock is already counting down"
+        }
+        _uiState.update { it.copy(showEmergencyConfirm = false, infoMessage = info) }
+        refresh()
+    }
+
+    fun cancelEmergencyUnlock() {
+        lockManager.cancelEmergencyUnlock()
         refresh()
     }
 

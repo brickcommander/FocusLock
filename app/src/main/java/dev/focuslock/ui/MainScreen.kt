@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.focuslock.BuildConfig
+import dev.focuslock.lock.EmergencyState
 import dev.focuslock.pin.PinManager
 import dev.focuslock.ui.theme.LocalStatusColors
 import kotlinx.coroutines.delay
@@ -53,9 +54,16 @@ fun MainScreen(
     val focusUntil = state.focusUntilMs
     val breakUntil = state.breakUntilMs
 
+    val emergency = state.emergency
+
     // A minute-level clock for the countdown; the screen refreshes itself when the session ends.
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val endsAt = focusUntil ?: breakUntil
+    val emergencyDeadline = when (emergency) {
+        is EmergencyState.Countdown -> emergency.unlockAtMs
+        is EmergencyState.TemporaryUnlock -> emergency.relockAtMs
+        null -> null
+    }
+    val endsAt = focusUntil ?: breakUntil ?: emergencyDeadline
     if (endsAt != null) {
         LaunchedEffect(endsAt) {
             while (true) {
@@ -86,6 +94,8 @@ fun MainScreen(
             onLock = viewModel::lock,
             onUnlock = { viewModel.openPinDialog(PinDialogMode.UNLOCK) },
             onEndBreak = viewModel::endBreak,
+            onForgotCode = viewModel::openEmergencyConfirm,
+            onCancelEmergency = viewModel::cancelEmergencyUnlock,
         )
 
         state.infoMessage?.let { InfoText(it) }
@@ -234,6 +244,13 @@ fun MainScreen(
         }
     }
 
+    if (state.showEmergencyConfirm) {
+        EmergencyConfirmDialog(
+            onConfirm = viewModel::confirmEmergencyUnlock,
+            onDismiss = viewModel::dismissEmergencyConfirm,
+        )
+    }
+
     LaunchedEffect(state.uninstallRequested) {
         if (state.uninstallRequested) {
             onRequestUninstall()
@@ -249,10 +266,13 @@ private fun StatusCard(
     onLock: () -> Unit,
     onUnlock: () -> Unit,
     onEndBreak: () -> Unit,
+    onForgotCode: () -> Unit,
+    onCancelEmergency: () -> Unit,
 ) {
     val status = LocalStatusColors.current
     val focusUntil = state.focusUntilMs
     val breakUntil = state.breakUntilMs
+    val emergency = state.emergency
 
     data class Look(val label: String, val headline: String, val detail: String?, val accent: Color, val tint: Color)
 
@@ -264,6 +284,11 @@ private fun StatusCard(
         breakUntil != null -> Look(
             "BREAK", "On a break", "${formatLeft(breakUntil - now)} left \u00B7 blocking resumes at ${clock(breakUntil)}",
             status.free, status.freeTint,
+        )
+        emergency is EmergencyState.TemporaryUnlock -> Look(
+            "TEMPORARY UNLOCK", "Unlocked",
+            "Locks again in ${formatLeft(emergency.relockAtMs - now)} \u00B7 at ${clock(emergency.relockAtMs)}",
+            status.locked, status.lockedTint,
         )
         state.isLocked -> Look(
             "LOCKED", "Locked", state.lastAppliedMs.takeIf { it > 0L }?.let { "Since ${clock(it)}" },
@@ -295,12 +320,44 @@ private fun StatusCard(
         }
         if (focusUntil != null) {
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Can't be ended early.", style = MaterialTheme.typography.bodySmall, color = accent)
+            Text("Can\u2019t be ended early.", style = MaterialTheme.typography.bodySmall, color = accent)
+        }
+
+        // Emergency countdown while locked
+        if (emergency is EmergencyState.Countdown) {
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                "Emergency unlock in ${formatLeft(emergency.unlockAtMs - now)}",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                "Unlocks at ${clock(emergency.unlockAtMs)} for 1 hour, then locks again.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        // Temporary unlock warning
+        if (emergency is EmergencyState.TemporaryUnlock) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Contact the person who set your code, or change your block list now.",
+                style = MaterialTheme.typography.bodySmall,
+                color = accent,
+            )
         }
 
         Spacer(modifier = Modifier.height(22.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             when {
+                emergency is EmergencyState.Countdown -> {
+                    SecondaryButton("Cancel emergency", onClick = onCancelEmergency, modifier = Modifier.weight(1f))
+                }
+                emergency is EmergencyState.TemporaryUnlock -> {
+                    PrimaryButton("Lock now", onClick = onLock, enabled = state.setup.isComplete, modifier = Modifier.weight(1f))
+                }
                 breakUntil != null -> {
                     PrimaryButton("End break now", onClick = onEndBreak, modifier = Modifier.weight(1f))
                 }
@@ -317,7 +374,22 @@ private fun StatusCard(
                 }
             }
         }
-        if (!state.isLocked && !state.setup.isComplete) {
+
+        // "Forgot code?" link — shown when locked, no focus, no emergency pending
+        if (state.isLocked && focusUntil == null && emergency == null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                TextButton(onClick = onForgotCode) {
+                    Text(
+                        "Forgot code?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        if (!state.isLocked && emergency == null && !state.setup.isComplete) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 "Finish the setup below to lock.",
@@ -325,6 +397,22 @@ private fun StatusCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun EmergencyConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AppDialog(
+        title = "Emergency unlock",
+        onDismiss = onDismiss,
+        confirmLabel = "Start countdown",
+        onConfirm = onConfirm,
+    ) {
+        DialogBody("Your phone will unlock after a 12-hour wait.")
+        Spacer(modifier = Modifier.height(12.dp))
+        DialogBody("You\u2019ll have 1 hour to use your phone freely. After that, FocusLock locks again automatically.")
+        Spacer(modifier = Modifier.height(12.dp))
+        DialogBody("This prevents impulse unlocking \u2014 you can\u2019t wait 12 hours on impulse.")
     }
 }
 

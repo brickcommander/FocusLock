@@ -1,5 +1,6 @@
 package dev.focuslock.ui
 
+import dev.focuslock.lock.EmergencyState
 import dev.focuslock.lock.FakeLockStateStore
 import dev.focuslock.lock.LockManager
 import dev.focuslock.pin.FakeClock
@@ -384,6 +385,74 @@ class MainViewModelTest {
         vm.refresh()
 
         assertNull(vm.uiState.value.focusUntilMs)
+    }
+
+    // ── Emergency cooldown unlock ──
+
+    @Test
+    fun `emergency confirm dialog opens and dismisses`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        vm.openEmergencyConfirm()
+        assertTrue(vm.uiState.value.showEmergencyConfirm)
+
+        vm.dismissEmergencyConfirm()
+        assertFalse(vm.uiState.value.showEmergencyConfirm)
+    }
+
+    @Test
+    fun `confirming emergency starts 12h countdown`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        vm.openEmergencyConfirm()
+        vm.confirmEmergencyUnlock()
+
+        assertFalse(vm.uiState.value.showEmergencyConfirm)
+        val emergency = vm.uiState.value.emergency
+        assertTrue("expected Countdown, got $emergency", emergency is EmergencyState.Countdown)
+    }
+
+    @Test
+    fun `cancelling emergency clears the countdown`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+        vm.confirmEmergencyUnlock()
+
+        vm.cancelEmergencyUnlock()
+
+        assertNull(vm.uiState.value.emergency)
+        assertTrue(vm.uiState.value.isLocked)
+    }
+
+    @Test
+    fun `emergency fires after 12 hours and shows temporary unlock`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+        vm.confirmEmergencyUnlock()
+
+        clock.advance(LockManager.EMERGENCY_WAIT_MS)
+        vm.refresh()
+
+        assertFalse(vm.uiState.value.isLocked)
+        val emergency = vm.uiState.value.emergency
+        assertTrue("expected TemporaryUnlock, got $emergency", emergency is EmergencyState.TemporaryUnlock)
+    }
+
+    @Test
+    fun `temporary unlock relocks after 1 hour`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+        vm.confirmEmergencyUnlock()
+        clock.advance(LockManager.EMERGENCY_WAIT_MS)
+        vm.refresh()
+
+        clock.advance(LockManager.EMERGENCY_UNLOCK_MS)
+        vm.refresh()
+
+        assertTrue(vm.uiState.value.isLocked)
+        assertNull(vm.uiState.value.emergency)
     }
 
     private companion object {

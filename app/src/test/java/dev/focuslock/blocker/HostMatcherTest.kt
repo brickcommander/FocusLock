@@ -79,14 +79,16 @@ class HostMatcherTest {
 
     @Test
     fun `subdomain is blocked`() {
-        assertTrue(HostMatcher.isBlockedHost("old.reddit.com"))
-        assertTrue(HostMatcher.isBlockedHost("www.instagram.com"))
-        assertTrue(HostMatcher.isBlockedHost("m.youtube.com"))
+        val blocked = setOf("reddit.com", "instagram.com", "youtube.com")
+        assertTrue(HostMatcher.isBlockedHost("old.reddit.com", blocked))
+        assertTrue(HostMatcher.isBlockedHost("www.instagram.com", blocked))
+        assertTrue(HostMatcher.isBlockedHost("m.youtube.com", blocked))
     }
 
     @Test
-    fun `every listed site is blocked exactly`() {
-        BlockList.sites.forEach { assertTrue(it, HostMatcher.isBlockedHost(it)) }
+    fun `exact host is blocked`() {
+        val blocked = setOf("youtube.com", "reddit.com")
+        blocked.forEach { assertTrue(it, HostMatcher.isBlockedHost(it, blocked)) }
     }
 
     /**

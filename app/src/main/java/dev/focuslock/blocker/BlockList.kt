@@ -13,23 +13,11 @@ object BlockList {
         BRAVE to listOf("com.brave.browser:id/url_bar"),
     )
 
-    /** Default apps, used until the user edits the list (BlockRulesStore). */
-    val apps: Set<String> = buildSet {
-        add("com.instagram.android")
-        add("com.instagram.lite")
-        add("com.google.android.youtube")
-        add("com.reddit.frontpage")
-        add("com.sec.android.app.sbrowser")   // Samsung Internet
-        add("org.mozilla.firefox")
-        if (BuildConfig.DEBUG) add("dev.focuslock.dummytarget")
-    }
+    /** Default apps: empty. The user builds their own list. Debug keeps the dummy target for testing. */
+    val apps: Set<String> = if (BuildConfig.DEBUG) setOf("dev.focuslock.dummytarget") else emptySet()
 
-    /** Default host suffixes. "youtube.com" also blocks "m.youtube.com", "www.youtube.com". */
-    val sites: Set<String> = setOf(
-        "youtube.com", "youtu.be",
-        "reddit.com", "redd.it",
-        "instagram.com", "instagr.am",
-    )
+    /** Default sites: empty. The user adds their own. */
+    val sites: Set<String> = emptySet()
 
     val neverBlock: Set<String> = setOf(SELF, "com.android.vending")
 

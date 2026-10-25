@@ -10,6 +10,10 @@ interface LockStateStoreContract {
     var lastAppliedEpochMs: Long
     var breakWindow: BreakWindow?
     var focusSession: FocusSession?
+    /** Epoch ms when an emergency unlock fires (0 = none pending). */
+    var emergencyUnlockAtMs: Long
+    /** Epoch ms when the emergency re-lock fires (0 = none pending). */
+    var emergencyRelockAtMs: Long
 
     fun addListener(listener: (Boolean) -> Unit)
     fun removeListener(listener: (Boolean) -> Unit)
@@ -32,31 +36,17 @@ class LockStateStore(context: Context) : LockStateStoreContract {
     private val breakListeners = CopyOnWriteArraySet<(BreakWindow?) -> Unit>()
     private val focusListeners = CopyOnWriteArraySet<(FocusSession?) -> Unit>()
 
-    // SharedPreferences only holds listeners weakly, so this field keeps it alive.
-    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-        when (key) {
-            KEY_LOCKED -> {
-                val locked = prefs.getBoolean(KEY_LOCKED, false)
-                listeners.forEach { it(locked) }
-            }
-            KEY_BREAK_START, KEY_BREAK_UNTIL -> {
-                val window = breakWindow
-                breakListeners.forEach { it(window) }
-            }
-            KEY_FOCUS_START, KEY_FOCUS_UNTIL -> {
-                val session = focusSession
-                focusListeners.forEach { it(session) }
-            }
-        }
-    }
-
-    init {
-        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
-    }
+    // Listeners are notified from the setters, not via OnSharedPreferenceChangeListener: prefs only
+    // hold that listener weakly, and R8 strips the field meant to keep it alive, so release builds
+    // silently stopped telling the blocker about lock changes after the next GC.
 
     override var isLocked: Boolean
         get() = prefs.getBoolean(KEY_LOCKED, false)
-        set(value) { prefs.edit { putBoolean(KEY_LOCKED, value) } }
+        set(value) {
+            val changed = value != isLocked
+            prefs.edit { putBoolean(KEY_LOCKED, value) }
+            if (changed) listeners.forEach { it(value) }
+        }
 
     override var lastAppliedEpochMs: Long
         get() = prefs.getLong(KEY_LAST_APPLIED, 0L)
@@ -68,6 +58,7 @@ class LockStateStore(context: Context) : LockStateStoreContract {
             return if (until > 0L) BreakWindow(prefs.getLong(KEY_BREAK_START, 0L), until) else null
         }
         set(value) {
+            val changed = value != breakWindow
             prefs.edit {
                 if (value == null) {
                     remove(KEY_BREAK_START)
@@ -77,6 +68,7 @@ class LockStateStore(context: Context) : LockStateStoreContract {
                     putLong(KEY_BREAK_UNTIL, value.untilMs)
                 }
             }
+            if (changed) breakListeners.forEach { it(value) }
         }
 
     override var focusSession: FocusSession?
@@ -85,6 +77,7 @@ class LockStateStore(context: Context) : LockStateStoreContract {
             return if (until > 0L) FocusSession(prefs.getLong(KEY_FOCUS_START, 0L), until) else null
         }
         set(value) {
+            val changed = value != focusSession
             prefs.edit {
                 if (value == null) {
                     remove(KEY_FOCUS_START)
@@ -94,7 +87,16 @@ class LockStateStore(context: Context) : LockStateStoreContract {
                     putLong(KEY_FOCUS_UNTIL, value.untilMs)
                 }
             }
+            if (changed) focusListeners.forEach { it(value) }
         }
+
+    override var emergencyUnlockAtMs: Long
+        get() = prefs.getLong(KEY_EMERGENCY_UNLOCK, 0L)
+        set(value) { prefs.edit { putLong(KEY_EMERGENCY_UNLOCK, value) } }
+
+    override var emergencyRelockAtMs: Long
+        get() = prefs.getLong(KEY_EMERGENCY_RELOCK, 0L)
+        set(value) { prefs.edit { putLong(KEY_EMERGENCY_RELOCK, value) } }
 
     override fun addListener(listener: (Boolean) -> Unit) {
         listeners.add(listener)
@@ -127,5 +129,7 @@ class LockStateStore(context: Context) : LockStateStoreContract {
         private const val KEY_BREAK_UNTIL = "break_until_epoch_ms"
         private const val KEY_FOCUS_START = "focus_start_epoch_ms"
         private const val KEY_FOCUS_UNTIL = "focus_until_epoch_ms"
+        private const val KEY_EMERGENCY_UNLOCK = "emergency_unlock_epoch_ms"
+        private const val KEY_EMERGENCY_RELOCK = "emergency_relock_epoch_ms"
     }
 }

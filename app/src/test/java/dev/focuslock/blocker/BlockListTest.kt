@@ -14,8 +14,14 @@ class BlockListTest {
     }
 
     @Test
-    fun `instagram lite is in apps`() {
-        assertTrue("com.instagram.lite" in BlockList.apps)
+    fun `default apps are empty in release`() {
+        // In debug builds the dummy target is included; in release, nothing.
+        assertTrue(BlockList.apps.none { it.startsWith("com.instagram") })
+    }
+
+    @Test
+    fun `default sites are empty`() {
+        assertTrue(BlockList.sites.isEmpty())
     }
 
     @Test

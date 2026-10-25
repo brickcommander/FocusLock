@@ -253,6 +253,141 @@ class LockManagerTest {
         assertFalse(store.isLocked)
     }
 
+    // ── Emergency cooldown unlock ──
+
+    @Test
+    fun `emergency unlock is refused when not locked`() {
+        val result = manager.requestEmergencyUnlock()
+
+        assertEquals(EmergencyResult.NotLocked, result)
+        assertEquals(null, manager.activeEmergency())
+    }
+
+    @Test
+    fun `emergency unlock is refused during a focus session`() {
+        manager.lock()
+        manager.startFocusSession(2)
+
+        val result = manager.requestEmergencyUnlock()
+
+        assertEquals(EmergencyResult.InFocusSession, result)
+    }
+
+    @Test
+    fun `emergency unlock starts a 12-hour countdown`() {
+        manager.lock()
+        clock.now = 10_000L
+
+        val result = manager.requestEmergencyUnlock()
+
+        val expected = 10_000L + LockManager.EMERGENCY_WAIT_MS
+        assertEquals(EmergencyResult.Started(expected), result)
+        assertEquals(EmergencyState.Countdown(expected), manager.activeEmergency())
+        assertTrue(store.isLocked)
+    }
+
+    @Test
+    fun `emergency refuses duplicate request`() {
+        manager.lock()
+        manager.requestEmergencyUnlock()
+
+        val result = manager.requestEmergencyUnlock()
+
+        assertEquals(EmergencyResult.AlreadyPending, result)
+    }
+
+    @Test
+    fun `cancel emergency clears the countdown`() {
+        manager.lock()
+        manager.requestEmergencyUnlock()
+
+        manager.cancelEmergencyUnlock()
+
+        assertEquals(null, manager.activeEmergency())
+        assertTrue(store.isLocked)
+    }
+
+    @Test
+    fun `tickEmergency unlocks after 12 hours and sets 1-hour relock`() {
+        manager.lock()
+        clock.now = 0L
+        manager.requestEmergencyUnlock()
+
+        clock.now = LockManager.EMERGENCY_WAIT_MS
+        manager.tickEmergency()
+
+        assertFalse(store.isLocked)
+        val emergency = manager.activeEmergency()
+        assertTrue(emergency is EmergencyState.TemporaryUnlock)
+        assertEquals(
+            LockManager.EMERGENCY_WAIT_MS + LockManager.EMERGENCY_UNLOCK_MS,
+            (emergency as EmergencyState.TemporaryUnlock).relockAtMs,
+        )
+    }
+
+    @Test
+    fun `tickEmergency relocks after the 1-hour temporary unlock`() {
+        manager.lock()
+        clock.now = 0L
+        manager.requestEmergencyUnlock()
+        clock.now = LockManager.EMERGENCY_WAIT_MS
+        manager.tickEmergency()
+
+        clock.now = LockManager.EMERGENCY_WAIT_MS + LockManager.EMERGENCY_UNLOCK_MS
+        manager.tickEmergency()
+
+        assertTrue(store.isLocked)
+        assertEquals(null, manager.activeEmergency())
+    }
+
+    @Test
+    fun `normal unlock clears emergency countdown`() = runTest {
+        manager.lock()
+        manager.requestEmergencyUnlock()
+
+        manager.unlock(PIN)
+
+        assertFalse(store.isLocked)
+        assertEquals(null, manager.activeEmergency())
+        assertEquals(0L, store.emergencyUnlockAtMs)
+    }
+
+    @Test
+    fun `manual lock clears emergency relock timer`() {
+        manager.lock()
+        clock.now = 0L
+        manager.requestEmergencyUnlock()
+        clock.now = LockManager.EMERGENCY_WAIT_MS
+        manager.tickEmergency() // temporary unlock
+        assertFalse(store.isLocked)
+
+        manager.lock() // manual re-lock
+
+        assertTrue(store.isLocked)
+        assertEquals(0L, store.emergencyRelockAtMs)
+        assertEquals(null, manager.activeEmergency())
+    }
+
+    @Test
+    fun `devForceUnlock clears emergency`() {
+        manager.lock()
+        manager.requestEmergencyUnlock()
+
+        manager.devForceUnlock()
+
+        assertEquals(null, manager.activeEmergency())
+    }
+
+    @Test
+    fun `removeCompletely clears emergency`() = runTest {
+        manager.lock()
+        manager.requestEmergencyUnlock()
+
+        manager.removeCompletely(PIN)
+
+        assertEquals(null, manager.activeEmergency())
+    }
+
     private companion object {
         const val PIN = "test482916"
         const val HOUR_MS = 60 * 60 * 1000L

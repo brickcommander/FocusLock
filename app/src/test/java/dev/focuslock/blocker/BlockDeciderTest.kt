@@ -25,15 +25,11 @@ class BlockDeciderTest {
 
     @Test
     fun `blocked app is blocked when locked`() {
-        val targets = listOf(
-            "com.instagram.android",
-            "com.instagram.lite",
-            "com.google.android.youtube",
-            "com.reddit.frontpage",
-        )
+        val targets = listOf("com.instagram.android", "com.instagram.lite", "com.google.android.youtube")
+        val rules = BlockRules(apps = targets.toSet(), sites = emptySet())
 
         targets.forEach { pkg ->
-            assertEquals(Decision.BlockApp(pkg), decider.decide(event(pkg), isLocked = true))
+            assertEquals(Decision.BlockApp(pkg), decider.decide(event(pkg), isLocked = true, rules = rules))
         }
     }
 
@@ -48,7 +44,8 @@ class BlockDeciderTest {
 
     @Test
     fun `chrome with blocked host is BlockSite`() {
-        val decision = decider.decide(event(BlockList.CHROME, url = "https://m.youtube.com/watch?v=1"), isLocked = true)
+        val rules = BlockRules(apps = emptySet(), sites = setOf("youtube.com"))
+        val decision = decider.decide(event(BlockList.CHROME, url = "https://m.youtube.com/watch?v=1"), isLocked = true, rules = rules)
 
         assertEquals(Decision.BlockSite("m.youtube.com"), decision)
     }
@@ -83,7 +80,8 @@ class BlockDeciderTest {
 
     @Test
     fun `brave with blocked host is BlockSite`() {
-        val decision = decider.decide(event(BlockList.BRAVE, url = "m.youtube.com"), isLocked = true)
+        val rules = BlockRules(apps = emptySet(), sites = setOf("youtube.com"))
+        val decision = decider.decide(event(BlockList.BRAVE, url = "m.youtube.com"), isLocked = true, rules = rules)
 
         assertEquals(Decision.BlockSite("m.youtube.com"), decision)
     }
@@ -183,8 +181,9 @@ class BlockDeciderTest {
 
     @Test
     fun `on a break blocked apps and sites are allowed`() {
-        val app = decider.decide(event("com.instagram.android"), isLocked = true, isOnBreak = true)
-        val site = decider.decide(event(BlockList.CHROME, url = "youtube.com"), isLocked = true, isOnBreak = true)
+        val rules = BlockRules(apps = setOf("com.instagram.android"), sites = setOf("youtube.com"))
+        val app = decider.decide(event("com.instagram.android"), isLocked = true, isOnBreak = true, rules = rules)
+        val site = decider.decide(event(BlockList.CHROME, url = "youtube.com"), isLocked = true, isOnBreak = true, rules = rules)
 
         assertEquals(Decision.Allow, app)
         assertEquals(Decision.Allow, site)

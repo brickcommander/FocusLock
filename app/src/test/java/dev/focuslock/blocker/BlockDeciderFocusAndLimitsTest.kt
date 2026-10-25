@@ -14,24 +14,24 @@ class BlockDeciderFocusAndLimitsTest {
 
     @Test
     fun `focus session blocks apps and sites while unlocked`() {
-        assertEquals(Decision.BlockApp(APP), decider.decide(event(APP), isLocked = false, isInFocus = true))
+        assertEquals(Decision.BlockApp(APP), decider.decide(event(APP), isLocked = false, rules = RULES, isInFocus = true))
         assertEquals(
             Decision.BlockSite("youtube.com"),
-            decider.decide(event(BlockList.CHROME, url = "youtube.com"), isLocked = false, isInFocus = true),
+            decider.decide(event(BlockList.CHROME, url = "youtube.com"), isLocked = false, rules = RULES, isInFocus = true),
         )
         assertTrue(decider.needsUrlBar(BlockList.CHROME, isLocked = false, isInFocus = true))
     }
 
     @Test
     fun `focus session ignores a break`() {
-        val decision = decider.decide(event(APP), isLocked = true, isOnBreak = true, isInFocus = true)
+        val decision = decider.decide(event(APP), isLocked = true, rules = RULES, isOnBreak = true, isInFocus = true)
 
         assertEquals(Decision.BlockApp(APP), decision)
     }
 
     @Test
     fun `focus session ignores daily allowance`() {
-        val decision = decider.decide(event(APP), isLocked = true, isInFocus = true, remainingMs = { 30 * MINUTE })
+        val decision = decider.decide(event(APP), isLocked = true, rules = RULES, isInFocus = true, remainingMs = { 30 * MINUTE })
 
         assertEquals(Decision.BlockApp(APP), decision)
     }
@@ -49,21 +49,21 @@ class BlockDeciderFocusAndLimitsTest {
 
     @Test
     fun `app with allowance left is allowed and timed`() {
-        val decision = decider.decide(event(APP), isLocked = true, remainingMs = { 20 * MINUTE })
+        val decision = decider.decide(event(APP), isLocked = true, rules = RULES, remainingMs = { 20 * MINUTE })
 
         assertEquals(Decision.AllowTimed(APP, 20 * MINUTE), decision)
     }
 
     @Test
     fun `app with used up allowance hits the limit`() {
-        val decision = decider.decide(event(APP), isLocked = true, remainingMs = { 0L })
+        val decision = decider.decide(event(APP), isLocked = true, rules = RULES, remainingMs = { 0L })
 
         assertEquals(Decision.LimitReached(APP), decision)
     }
 
     @Test
     fun `blocked app without a limit stays blocked`() {
-        val decision = decider.decide(event(APP), isLocked = true, remainingMs = { null })
+        val decision = decider.decide(event(APP), isLocked = true, rules = RULES, remainingMs = { null })
 
         assertEquals(Decision.BlockApp(APP), decision)
     }
@@ -109,6 +109,7 @@ class BlockDeciderFocusAndLimitsTest {
         val decision = decider.decide(
             event(BlockList.CHROME, url = "m.youtube.com/watch"),
             isLocked = true,
+            rules = RULES,
             remainingMs = { 10 * MINUTE },
         )
 
@@ -152,5 +153,6 @@ class BlockDeciderFocusAndLimitsTest {
         const val OTHER = "com.whatsapp"
         const val SETTINGS = "com.android.settings"
         const val MINUTE = 60_000L
+        val RULES = BlockRules(apps = setOf(APP), sites = setOf("youtube.com"))
     }
 }

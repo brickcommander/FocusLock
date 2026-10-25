@@ -23,6 +23,7 @@ class LockManager(
     fun lock(): LockResult {
         refusal()?.let { return LockResult.Refused(it) }
         store.breakWindow = null
+        store.emergencyRelockAtMs = 0L // manual lock supersedes emergency relock
         store.isLocked = true
         store.lastAppliedEpochMs = clock.nowMs()
         return LockResult.Locked
@@ -34,6 +35,7 @@ class LockManager(
             VerifyResult.Ok -> {
                 store.isLocked = false
                 store.breakWindow = null
+                clearEmergency()
                 UnlockResult.Unlocked
             }
             else -> UnlockResult.Refused(result)
@@ -110,6 +112,7 @@ class LockManager(
                 store.isLocked = false
                 store.breakWindow = null
                 store.focusSession = null
+                clearEmergency()
                 clearDailyLimits()
                 setupChecker.deactivateAdmin()
                 UnlockResult.Unlocked
@@ -123,6 +126,60 @@ class LockManager(
         store.isLocked = false
         store.breakWindow = null
         store.focusSession = null
+        clearEmergency()
+    }
+
+    // ── Emergency cooldown unlock ──
+
+    /** Starts a 12-hour countdown. After it elapses the phone unlocks for 1 hour, then re-locks. */
+    fun requestEmergencyUnlock(): EmergencyResult {
+        if (activeFocusSession() != null) return EmergencyResult.InFocusSession
+        if (!store.isLocked) return EmergencyResult.NotLocked
+        if (store.emergencyUnlockAtMs > 0L) return EmergencyResult.AlreadyPending
+        val unlockAt = clock.nowMs() + EMERGENCY_WAIT_MS
+        store.emergencyUnlockAtMs = unlockAt
+        return EmergencyResult.Started(unlockAt)
+    }
+
+    /** Cancels a pending emergency countdown. No code needed (it only keeps the lock on). */
+    fun cancelEmergencyUnlock() {
+        store.emergencyUnlockAtMs = 0L
+    }
+
+    /** Returns the current emergency state, or null if no emergency is active. */
+    fun activeEmergency(): EmergencyState? {
+        val unlockAt = store.emergencyUnlockAtMs
+        if (unlockAt > 0L) return EmergencyState.Countdown(unlockAt)
+        val relockAt = store.emergencyRelockAtMs
+        if (relockAt > 0L && !store.isLocked) return EmergencyState.TemporaryUnlock(relockAt)
+        return null
+    }
+
+    /**
+     * Checks emergency timestamps and performs transitions. Call frequently (on every event,
+     * on UI refresh). The state changes propagate through the existing lock listeners.
+     */
+    fun tickEmergency() {
+        val now = clock.nowMs()
+        val unlockAt = store.emergencyUnlockAtMs
+        if (unlockAt > 0L && now >= unlockAt) {
+            store.emergencyUnlockAtMs = 0L
+            store.breakWindow = null
+            store.isLocked = false
+            store.emergencyRelockAtMs = now + EMERGENCY_UNLOCK_MS
+            return
+        }
+        val relockAt = store.emergencyRelockAtMs
+        if (relockAt > 0L && now >= relockAt) {
+            store.emergencyRelockAtMs = 0L
+            store.isLocked = true
+            store.lastAppliedEpochMs = now
+        }
+    }
+
+    private fun clearEmergency() {
+        store.emergencyUnlockAtMs = 0L
+        store.emergencyRelockAtMs = 0L
     }
 
     private fun refusal(): LockRefusal? {
@@ -138,5 +195,9 @@ class LockManager(
         val BREAK_HOURS = 1..12
         val FOCUS_HOURS = listOf(1, 2, 3, 6)
         private const val HOUR_MS = 60 * 60 * 1000L
+        /** How long the emergency countdown runs before unlocking (12 hours). */
+        const val EMERGENCY_WAIT_MS = 12 * HOUR_MS
+        /** How long the temporary unlock lasts before re-locking (1 hour). */
+        const val EMERGENCY_UNLOCK_MS = 1 * HOUR_MS
     }
 }
