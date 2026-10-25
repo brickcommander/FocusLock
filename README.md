@@ -13,6 +13,25 @@ Unlike intrusive distraction blockers that drain your battery with background VP
 
 ---
 
+## 👨‍💻 Built by Pawan — Senior Software Engineer
+
+Hi there! 👋 I'm **Pawan**, a Senior Software Engineer passionate about crafting high-performance mobile systems, clean software architecture, and privacy-first digital tools.
+
+I designed and built **FocusLock** out of a personal need for a zero-battery-drain, tamper-proof tool to eliminate mindless scrolling and reclaim deep focus—without paywalls, ad tracking, or invasive VPNs.
+
+### 🌐 Let's Connect & Collaborate
+I am always enthusiastic about connecting with developers, tech leads, founders, and creators across all domains! Whether you want to discuss software engineering, give feedback on FocusLock, or explore new opportunities, feel free to reach out:
+
+- ✉️ **Email**: [pawanlive2000@gmail.com](mailto:pawanlive2000@gmail.com)
+- 📞 **Phone / WhatsApp**: [+91 9617466846](tel:+919617466846)
+
+### ☕ Support Open-Source Development
+FocusLock is completely free, transparent, and privacy-respecting. If this app helped you save hours of screen time, boost your productivity, or build healthier phone habits, consider supporting its ongoing open-source development!
+
+- 💳 **Buy Me a Coffee (UPI)**: `9617466846` / `+91-9617466846`
+
+---
+
 ## ⚡ Quick Download
 
 Download the official pre-compiled Android release package directly from this repository:
