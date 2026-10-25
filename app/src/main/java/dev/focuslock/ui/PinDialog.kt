@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,7 +39,9 @@ fun PinDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = {
+            Text(title, style = MaterialTheme.typography.headlineSmall)
+        },
         text = {
             Column {
                 description?.let {
@@ -57,6 +60,7 @@ fun PinDialog(
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -83,6 +87,7 @@ fun PinDialog(
                 Text("Cancel")
             }
         },
+        shape = RoundedCornerShape(20.dp),
     )
 }
 

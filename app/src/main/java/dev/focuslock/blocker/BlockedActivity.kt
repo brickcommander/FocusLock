@@ -6,21 +6,31 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.focuslock.ui.theme.FocusLockTheme
 
 /**
@@ -43,31 +53,100 @@ class BlockedActivity : ComponentActivity() {
         })
 
         setContent {
-            FocusLockTheme {
-                Scaffold { innerPadding ->
+            FocusLockTheme(darkTheme = true) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF1A0000),
+                                    Color(0xFF7F1D1D),
+                                    Color(0xFFDC2626),
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding)
-                            .padding(24.dp),
+                            .padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
+                        // Lock icon circle
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.15f)),
+                        ) {
+                            Text("🔒", fontSize = 44.sp)
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
                         Text(
-                            text = "🔒 Blocked by FocusLock",
-                            style = MaterialTheme.typography.headlineMedium,
-                            textAlign = TextAlign.Center,
+                            text = "BLOCKED",
+                            color = Color.White,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 4.sp,
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         Text(
-                            text = reason.value,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center,
+                            text = "by FocusLock",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp,
                         )
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Button(onClick = ::dismiss) {
-                            Text("OK")
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Reason chip
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White.copy(alpha = 0.15f))
+                                .padding(horizontal = 20.dp, vertical = 10.dp),
+                        ) {
+                            Text(
+                                text = reason.value,
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(40.dp))
+
+                        Button(
+                            onClick = ::dismiss,
+                            modifier = Modifier.fillMaxWidth(0.6f).height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White,
+                                contentColor = Color(0xFFDC2626),
+                            ),
+                        ) {
+                            Text(
+                                text = if (isSiteBlock) "Go back" else "OK",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+
+                        if (isSiteBlock) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Close or switch the tab",
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontSize = 12.sp,
+                            )
                         }
                     }
                 }
@@ -88,8 +167,6 @@ class BlockedActivity : ComponentActivity() {
 
     private fun dismiss() {
         if (isSiteBlock) {
-            // Go back to the browser so the user can close or switch the tab.
-            // The grace period in DecisionThrottle prevents instant re-blocking.
             gracePeriodUntilMs = System.currentTimeMillis() + GRACE_MS
             finish()
         } else {
@@ -103,7 +180,6 @@ class BlockedActivity : ComponentActivity() {
         private const val EXTRA_IS_SITE = "dev.focuslock.extra.IS_SITE"
         private const val GRACE_MS = 10_000L
 
-        /** After pressing OK on a site block, the service skips site blocks for this long. */
         @Volatile
         @JvmStatic
         var gracePeriodUntilMs: Long = 0L

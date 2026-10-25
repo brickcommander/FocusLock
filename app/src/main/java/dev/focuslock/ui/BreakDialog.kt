@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,22 +42,37 @@ fun BreakDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Take a break") },
+        title = {
+            Text("☕ Take a break", style = MaterialTheme.typography.headlineSmall)
+        },
         text = {
             Column {
                 Text(
-                    "Unblocks all apps and websites, then blocking comes back by itself. Friend: enter the code.",
+                    "Unblocks all apps and websites, then blocking comes back by itself.\nFriend: enter the code.",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = { hours-- }, enabled = !isBusy && hours > range.first) { Text("−") }
+                    OutlinedButton(
+                        onClick = { hours-- },
+                        enabled = !isBusy && hours > range.first,
+                        shape = RoundedCornerShape(10.dp),
+                    ) {
+                        Text("−")
+                    }
                     Text(
                         text = if (hours == 1) "1 hour" else "$hours hours",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
-                    OutlinedButton(onClick = { hours++ }, enabled = !isBusy && hours < range.last) { Text("+") }
+                    OutlinedButton(
+                        onClick = { hours++ },
+                        enabled = !isBusy && hours < range.last,
+                        shape = RoundedCornerShape(10.dp),
+                    ) {
+                        Text("+")
+                    }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
@@ -68,10 +84,15 @@ fun BreakDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
                 )
                 message?.let {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(it.toText(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        it.toText(),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
                 if (isBusy) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -80,11 +101,14 @@ fun BreakDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSubmit(pin, hours) }, enabled = !isBusy) { Text("Start break") }
+            TextButton(onClick = { onSubmit(pin, hours) }, enabled = !isBusy) {
+                Text("Start break")
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isBusy) { Text("Cancel") }
         },
+        shape = RoundedCornerShape(20.dp),
     )
 }
 
