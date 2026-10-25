@@ -42,13 +42,11 @@ fun BreakDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text("☕ Take a break", style = MaterialTheme.typography.headlineSmall)
-        },
+        title = { Text("Take a break", style = MaterialTheme.typography.headlineSmall) },
         text = {
             Column {
                 Text(
-                    "Unblocks all apps and websites, then blocking comes back by itself.\nFriend: enter the code.",
+                    "Temporarily unblock all apps and websites. Blocking resumes automatically. Your friend enters the code.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -57,24 +55,24 @@ fun BreakDialog(
                     OutlinedButton(
                         onClick = { hours-- },
                         enabled = !isBusy && hours > range.first,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(8.dp),
                     ) {
-                        Text("−")
+                        Text("\u2212")
                     }
                     Text(
                         text = if (hours == 1) "1 hour" else "$hours hours",
                         style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = 20.dp),
                     )
                     OutlinedButton(
                         onClick = { hours++ },
                         enabled = !isBusy && hours < range.last,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(8.dp),
                     ) {
                         Text("+")
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = pin,
                     onValueChange = { input -> pin = input.take(PinManager.MAX_LENGTH) },
@@ -84,7 +82,7 @@ fun BreakDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                 )
                 message?.let {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -108,7 +106,7 @@ fun BreakDialog(
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isBusy) { Text("Cancel") }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
     )
 }
 

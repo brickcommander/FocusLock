@@ -8,15 +8,12 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -24,8 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -54,100 +49,57 @@ class BlockedActivity : ComponentActivity() {
 
         setContent {
             FocusLockTheme(darkTheme = true) {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(0xFF1A0000),
-                                    Color(0xFF7F1D1D),
-                                    Color(0xFFDC2626),
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center,
+                        .background(Color(0xFF0A0A0A))
+                        .padding(horizontal = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                    Text(
+                        text = "Blocked",
+                        color = Color.White,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Light,
+                        letterSpacing = 2.sp,
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = reason.value,
+                        color = Color(0xFF9CA3AF),
+                        fontSize = 15.sp,
+                        textAlign = TextAlign.Center,
+                    )
+
+                    Spacer(modifier = Modifier.height(48.dp))
+
+                    Button(
+                        onClick = ::dismiss,
+                        modifier = Modifier.fillMaxWidth(0.5f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF262626),
+                            contentColor = Color.White,
+                        ),
                     ) {
-                        // Lock icon circle
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f)),
-                        ) {
-                            Text("🔒", fontSize = 44.sp)
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
                         Text(
-                            text = "BLOCKED",
-                            color = Color.White,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 4.sp,
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = "by FocusLock",
-                            color = Color.White.copy(alpha = 0.7f),
+                            text = if (isSiteBlock) "Go back" else "OK",
                             fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
                         )
+                    }
 
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Reason chip
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.15f))
-                                .padding(horizontal = 20.dp, vertical = 10.dp),
-                        ) {
-                            Text(
-                                text = reason.value,
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(40.dp))
-
-                        Button(
-                            onClick = ::dismiss,
-                            modifier = Modifier.fillMaxWidth(0.6f).height(52.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White,
-                                contentColor = Color(0xFFDC2626),
-                            ),
-                        ) {
-                            Text(
-                                text = if (isSiteBlock) "Go back" else "OK",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-
-                        if (isSiteBlock) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Close or switch the tab",
-                                color = Color.White.copy(alpha = 0.6f),
-                                fontSize = 12.sp,
-                            )
-                        }
+                    if (isSiteBlock) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Close or switch the tab to continue browsing.",
+                            color = Color(0xFF525252),
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
+                        )
                     }
                 }
             }

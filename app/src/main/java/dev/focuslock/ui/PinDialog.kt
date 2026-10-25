@@ -39,14 +39,16 @@ fun PinDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(title, style = MaterialTheme.typography.headlineSmall)
-        },
+        title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
         text = {
             Column {
                 description?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
                 fieldLabels.forEachIndexed { index, label ->
                     OutlinedTextField(
@@ -60,7 +62,7 @@ fun PinDialog(
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -87,7 +89,7 @@ fun PinDialog(
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
     )
 }
 
@@ -95,10 +97,10 @@ private val timeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
 
 internal fun PinMessage.toText(): String = when (this) {
-    is PinMessage.Wrong -> "Wrong code, $remaining ${if (remaining == 1) "try" else "tries"} left"
-    is PinMessage.LockedOut -> "Locked out until ${timeFormatter.format(Instant.ofEpochMilli(untilMs))}"
-    PinMessage.InvalidFormat -> "Code must be ${PinManager.MIN_LENGTH}–${PinManager.MAX_LENGTH} characters"
-    PinMessage.Mismatch -> "Codes don't match"
-    PinMessage.NotSet -> "No code has been set"
-    PinMessage.AlreadySet -> "A code is already set"
+    is PinMessage.Wrong -> "Wrong code. $remaining ${if (remaining == 1) "attempt" else "attempts"} remaining."
+    is PinMessage.LockedOut -> "Too many attempts. Try again after ${timeFormatter.format(Instant.ofEpochMilli(untilMs))}."
+    PinMessage.InvalidFormat -> "Code must be ${PinManager.MIN_LENGTH}\u2013${PinManager.MAX_LENGTH} characters."
+    PinMessage.Mismatch -> "Codes don\u2019t match."
+    PinMessage.NotSet -> "No code has been set."
+    PinMessage.AlreadySet -> "A code is already set."
 }

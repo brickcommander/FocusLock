@@ -1,10 +1,8 @@
 package dev.focuslock.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,18 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -41,17 +36,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.focuslock.apps.AppEntry
-import dev.focuslock.ui.theme.Coral400
-import dev.focuslock.ui.theme.Teal400
-
-private val cardShape = RoundedCornerShape(20.dp)
 
 @Composable
 fun BlockListScreen(viewModel: BlockListViewModel) {
@@ -63,21 +52,32 @@ fun BlockListScreen(viewModel: BlockListViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .verticalScroll(rememberScrollState()),
         ) {
             // Header
-            Text(
-                text = "Block List",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
+            Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp)) {
+                Text(
+                    text = "Block list",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
 
             if (state.isLocked) {
-                LockedBanner()
-                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    Text(
+                        text = "Unlock to edit this list.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
             }
 
             state.message?.let {
@@ -85,33 +85,19 @@ fun BlockListScreen(viewModel: BlockListViewModel) {
                     text = it,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
                 )
             }
 
-            // ── Apps section ──
-            SectionHeader(emoji = "📱", title = "Apps")
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(cardShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .padding(16.dp),
-            ) {
+            // ── Apps ──
+            SectionLabel("Apps")
+            GroupCard {
                 if (state.apps.isEmpty()) {
-                    EmptyState("No apps blocked")
+                    EmptyRow("No apps blocked")
                 } else {
                     state.apps.forEachIndexed { index, app ->
-                        if (index > 0) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                modifier = Modifier.padding(vertical = 4.dp),
-                            )
-                        }
-                        BlockedItemRow(
-                            emoji = "📱",
+                        if (index > 0) GroupDivider()
+                        ItemRow(
                             title = app.label,
                             subtitle = app.packageName.takeIf { it != app.label },
                             canEdit = canEdit,
@@ -121,53 +107,44 @@ fun BlockListScreen(viewModel: BlockListViewModel) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-            Button(
-                onClick = viewModel::openPicker,
-                enabled = canEdit,
-                modifier = Modifier.fillMaxWidth().height(44.dp),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text("+ Add from installed apps")
+            if (canEdit) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Button(
+                        onClick = viewModel::openPicker,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).height(40.dp),
+                    ) {
+                        Text("Add from installed", style = MaterialTheme.typography.titleSmall)
+                    }
+                }
+                AddField(
+                    label = "Package name",
+                    confirmLabel = "Add",
+                    keyboardType = KeyboardType.Uri,
+                    enabled = true,
+                    onAdd = viewModel::addApp,
+                )
             }
-            AddField(
-                label = "Or type a package name",
-                confirmLabel = "Add app",
-                keyboardType = KeyboardType.Uri,
-                enabled = canEdit,
-                onAdd = viewModel::addApp,
-            )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ── Websites section ──
-            SectionHeader(emoji = "🌐", title = "Websites")
+            // ── Websites ──
+            SectionLabel("Websites")
             Text(
-                text = "Blocked in Chrome and Brave, including all subdomains.",
+                text = "Blocked in Chrome and Brave. All subdomains included.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp),
             )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(cardShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .padding(16.dp),
-            ) {
+            Spacer(modifier = Modifier.height(6.dp))
+            GroupCard {
                 if (state.sites.isEmpty()) {
-                    EmptyState("No websites blocked")
+                    EmptyRow("No websites blocked")
                 } else {
                     state.sites.forEachIndexed { index, site ->
-                        if (index > 0) {
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                modifier = Modifier.padding(vertical = 4.dp),
-                            )
-                        }
-                        BlockedItemRow(
-                            emoji = "🌐",
+                        if (index > 0) GroupDivider()
+                        ItemRow(
                             title = site,
                             subtitle = null,
                             canEdit = canEdit,
@@ -177,15 +154,17 @@ fun BlockListScreen(viewModel: BlockListViewModel) {
                 }
             }
 
-            AddField(
-                label = "Website, e.g. tiktok.com",
-                confirmLabel = "Add website",
-                keyboardType = KeyboardType.Uri,
-                enabled = canEdit,
-                onAdd = viewModel::addSite,
-            )
+            if (canEdit) {
+                AddField(
+                    label = "Domain, e.g. tiktok.com",
+                    confirmLabel = "Add",
+                    keyboardType = KeyboardType.Uri,
+                    enabled = true,
+                    onAdd = viewModel::addSite,
+                )
+            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 
@@ -198,74 +177,58 @@ fun BlockListScreen(viewModel: BlockListViewModel) {
     }
 }
 
-@Composable
-private fun SectionHeader(emoji: String, title: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(emoji, fontSize = 20.sp)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
+// ── Shared ──
 
 @Composable
-private fun LockedBanner() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f))
-            .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("🔒", fontSize = 18.sp)
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = "Unlock with the code to change the list.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
-    }
-}
-
-@Composable
-private fun EmptyState(text: String) {
+private fun SectionLabel(text: String) {
     Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(vertical = 8.dp),
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 8.dp),
     )
 }
 
 @Composable
-private fun BlockedItemRow(
-    emoji: String,
-    title: String,
-    subtitle: String?,
-    canEdit: Boolean,
-    onRemove: () -> Unit,
-) {
+private fun GroupCard(content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun GroupDivider() {
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant,
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
+}
+
+@Composable
+private fun EmptyRow(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+    )
+}
+
+@Composable
+private fun ItemRow(title: String, subtitle: String?, canEdit: Boolean, onRemove: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-        ) {
-            Text(emoji, fontSize = 16.sp)
-        }
-        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             subtitle?.let {
@@ -277,11 +240,12 @@ private fun BlockedItemRow(
             }
         }
         if (canEdit) {
-            TextButton(
-                onClick = onRemove,
-                colors = ButtonDefaults.textButtonColors(contentColor = Coral400),
-            ) {
-                Text("Remove", style = MaterialTheme.typography.labelMedium)
+            TextButton(onClick = onRemove) {
+                Text(
+                    "Remove",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         }
     }
@@ -296,18 +260,21 @@ private fun AddField(
     onAdd: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
-    Spacer(modifier = Modifier.height(8.dp))
-    OutlinedTextField(
-        value = text,
-        onValueChange = { text = it },
-        label = { Text(label) },
-        singleLine = true,
-        enabled = enabled,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-    )
-    Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            label = { Text(label) },
+            singleLine = true,
+            enabled = enabled,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
         OutlinedButton(
             onClick = {
                 onAdd(text)
@@ -325,45 +292,27 @@ private fun AddField(
 private fun AppPickerDialog(apps: List<AppEntry>, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Choose an app to block",
-                style = MaterialTheme.typography.headlineSmall,
-            )
-        },
+        title = { Text("Add app", style = MaterialTheme.typography.headlineSmall) },
         text = {
             if (apps.isEmpty()) {
-                Text("No other apps to add.")
+                Text("No other apps available.")
             } else {
                 LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                     items(apps, key = { it.packageName }) { app ->
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onPick(app.packageName) }
                                 .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Teal400.copy(alpha = 0.1f)),
-                            ) {
-                                Text("📱", fontSize = 16.sp)
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(app.label, style = MaterialTheme.typography.bodyLarge)
-                                Text(
-                                    app.packageName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+                            Text(app.label, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                app.packageName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
             }
@@ -372,5 +321,6 @@ private fun AppPickerDialog(apps: List<AppEntry>, onPick: (String) -> Unit, onDi
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         },
+        shape = RoundedCornerShape(16.dp),
     )
 }

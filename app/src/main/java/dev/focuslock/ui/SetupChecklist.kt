@@ -1,8 +1,6 @@
 package dev.focuslock.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,23 +9,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.focuslock.setup.SetupStatus
-import dev.focuslock.ui.theme.Teal400
-import dev.focuslock.ui.theme.Teal900
+import dev.focuslock.ui.theme.StatusLocked
+import dev.focuslock.ui.theme.StatusUnlocked
 
 @Composable
 fun SetupChecklist(
@@ -39,48 +34,40 @@ fun SetupChecklist(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(20.dp),
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Text(
-            text = "GET STARTED",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            letterSpacing = 1.sp,
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-
-        StepItem(
+        StepRow(
             step = 1,
             done = status.blockerServiceEnabled,
-            title = "Turn on blocker",
-            actionLabel = "Open Accessibility settings",
+            title = "Enable blocker service",
+            actionLabel = "Open settings",
             onAction = onOpenAccessibilitySettings,
-            help = "If the toggle is greyed out:\nApp info → ⋮ → Allow restricted settings.",
+            help = "If greyed out: App info \u2192 \u22EE \u2192 Allow restricted settings",
         )
-        Spacer(modifier = Modifier.height(10.dp))
-        StepItem(
+        StepDivider()
+        StepRow(
             step = 2,
             done = status.deviceAdminActive,
-            title = "Turn on uninstall protection",
+            title = "Uninstall protection",
             actionLabel = "Activate",
             onAction = onActivateDeviceAdmin,
         )
-        Spacer(modifier = Modifier.height(10.dp))
-        StepItem(
+        StepDivider()
+        StepRow(
             step = 3,
             done = status.pinSet,
-            title = "Friend sets the code",
-            actionLabel = "Hand phone to friend",
+            title = "Set the code",
+            actionLabel = "Set code",
             onAction = onSetCode,
-            help = "They set the code that unlocks FocusLock.\nDon't watch them type it.",
+            help = "Hand your phone to a friend. They choose the code.",
         )
     }
 }
 
 @Composable
-private fun StepItem(
+private fun StepRow(
     step: Int,
     done: Boolean,
     title: String,
@@ -91,58 +78,27 @@ private fun StepItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(
-                if (done) Teal400.copy(alpha = 0.08f)
-                else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-            )
-            .border(
-                width = 1.dp,
-                color = if (done) Teal400.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(14.dp),
-            )
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        // Step indicator
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(if (done) Teal400 else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-        ) {
-            Text(
-                text = if (done) "✓" else "$step",
-                color = if (done) Teal900 else MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-            )
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
+        // Status indicator
+        Text(
+            text = if (done) "\u2713" else "$step",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = if (done) StatusUnlocked else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyLarge,
                 color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             )
             if (!done) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = onAction,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                    modifier = Modifier.height(36.dp),
-                ) {
-                    Text(actionLabel, style = MaterialTheme.typography.labelMedium)
-                }
                 help?.let {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
@@ -151,5 +107,18 @@ private fun StepItem(
                 }
             }
         }
+        if (!done) {
+            TextButton(onClick = onAction) {
+                Text(actionLabel, style = MaterialTheme.typography.titleSmall)
+            }
+        }
     }
+}
+
+@Composable
+private fun StepDivider() {
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant,
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
 }
