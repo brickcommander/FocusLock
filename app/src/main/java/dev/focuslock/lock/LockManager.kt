@@ -3,15 +3,26 @@ package dev.focuslock.lock
 import dev.focuslock.pin.Clock
 import dev.focuslock.pin.PinManager
 import dev.focuslock.pin.VerifyResult
+import dev.focuslock.setup.SetupChecker
+import dev.focuslock.setup.SetupStatus
 
 class LockManager(
     private val store: LockStateStoreContract,
     private val pinManager: PinManager,
+    private val setupChecker: SetupChecker,
     private val clock: Clock,
 ) {
 
+    fun setupStatus(): SetupStatus = SetupStatus(
+        blockerServiceEnabled = setupChecker.isBlockerServiceEnabled(),
+        deviceAdminActive = setupChecker.isDeviceAdminActive(),
+        pinSet = pinManager.isSet(),
+    )
+
     fun lock(): LockResult {
-        if (!pinManager.isSet()) return LockResult.Refused(LockRefusal.NO_PIN)
+        val status = setupStatus()
+        if (!status.pinSet) return LockResult.Refused(LockRefusal.NO_PIN)
+        if (!status.isComplete) return LockResult.Refused(LockRefusal.SETUP_INCOMPLETE)
         store.isLocked = true
         store.lastAppliedEpochMs = clock.nowMs()
         return LockResult.Locked

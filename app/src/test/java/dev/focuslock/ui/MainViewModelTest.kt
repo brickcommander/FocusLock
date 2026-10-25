@@ -6,6 +6,7 @@ import dev.focuslock.pin.FakeClock
 import dev.focuslock.pin.InMemoryPinStore
 import dev.focuslock.pin.PinHasher
 import dev.focuslock.pin.PinManager
+import dev.focuslock.setup.FakeSetupChecker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -25,14 +26,16 @@ class MainViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private lateinit var store: FakeLockStateStore
     private lateinit var pinManager: PinManager
+    private lateinit var setup: FakeSetupChecker
     private lateinit var lockManager: LockManager
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         store = FakeLockStateStore()
+        setup = FakeSetupChecker()
         pinManager = PinManager(InMemoryPinStore(), PinHasher(iterations = 1_000), FakeClock(), dispatcher)
-        lockManager = LockManager(store, pinManager, FakeClock())
+        lockManager = LockManager(store, pinManager, setup, FakeClock())
     }
 
     @After
@@ -40,9 +43,7 @@ class MainViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private var serviceEnabled = false
-
-    private fun createViewModel() = MainViewModel(lockManager, store, pinManager) { serviceEnabled }
+    private fun createViewModel() = MainViewModel(lockManager, store, pinManager)
 
     private fun createViewModelWithPin(): MainViewModel = createViewModel().apply {
         submitSetPin(PIN, PIN)
@@ -133,14 +134,46 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `blocker service status is re-read on refresh`() {
+    fun `setup status is re-read on refresh`() {
+        setup.serviceEnabled = false
         val vm = createViewModel()
-        assertFalse(vm.uiState.value.isBlockerServiceEnabled)
+        assertFalse(vm.uiState.value.setup.blockerServiceEnabled)
 
-        serviceEnabled = true
+        setup.serviceEnabled = true
         vm.refresh()
 
-        assertTrue(vm.uiState.value.isBlockerServiceEnabled)
+        assertTrue(vm.uiState.value.setup.blockerServiceEnabled)
+    }
+
+    @Test
+    fun `lock with incomplete setup stays unlocked and explains why`() {
+        setup.adminActive = false
+        val vm = createViewModelWithPin()
+
+        vm.lock()
+
+        assertFalse(vm.uiState.value.isLocked)
+        assertEquals("Finish the setup checklist first", vm.uiState.value.infoMessage)
+    }
+
+    @Test
+    fun `protection off banner shown when locked and service disabled`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        setup.serviceEnabled = false
+        vm.refresh()
+
+        assertTrue(vm.uiState.value.isProtectionOff)
+    }
+
+    @Test
+    fun `protection off banner hidden when locked and setup complete`() {
+        val vm = createViewModelWithPin()
+
+        vm.lock()
+
+        assertFalse(vm.uiState.value.isProtectionOff)
     }
 
     @Test

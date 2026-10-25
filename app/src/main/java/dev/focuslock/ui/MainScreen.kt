@@ -1,6 +1,9 @@
 package dev.focuslock.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,6 +37,7 @@ private val timeFormatter: DateTimeFormatter =
 fun MainScreen(
     viewModel: MainViewModel,
     onOpenAccessibilitySettings: () -> Unit,
+    onActivateDeviceAdmin: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -51,23 +55,21 @@ fun MainScreen(
                 style = MaterialTheme.typography.headlineLarge,
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = if (state.isBlockerServiceEnabled) "Blocker service: ON" else "Blocker service: OFF",
-                style = MaterialTheme.typography.titleMedium,
-                color = if (state.isBlockerServiceEnabled) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
-            )
-            if (!state.isBlockerServiceEnabled) {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = onOpenAccessibilitySettings) {
-                    Text("Turn on blocker")
-                }
+            if (state.isProtectionOff) {
+                ProtectionOffBanner(
+                    onFix = if (!state.setup.blockerServiceEnabled) onOpenAccessibilitySettings else onActivateDeviceAdmin,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
             }
+
+            SetupChecklist(
+                status = state.setup,
+                onOpenAccessibilitySettings = onOpenAccessibilitySettings,
+                onActivateDeviceAdmin = onActivateDeviceAdmin,
+                onSetCode = { viewModel.openPinDialog(PinDialogMode.SET) },
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -89,29 +91,12 @@ fun MainScreen(
                 )
             }
 
-            if (!state.isPinSet) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Hand the phone to your friend",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = "They set the code that unlocks FocusLock. Lock stays disabled until a code exists.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { viewModel.openPinDialog(PinDialogMode.SET) }) {
-                    Text("Set code")
-                }
-            }
-
             Spacer(modifier = Modifier.height(24.dp))
 
             Row {
                 Button(
                     onClick = { viewModel.lock() },
-                    enabled = state.isPinSet && !state.isLocked,
+                    enabled = state.setup.isComplete && !state.isLocked,
                 ) {
                     Text("Lock")
                 }
@@ -178,5 +163,37 @@ fun MainScreen(
             onDismiss = viewModel::dismissPinDialog,
         )
         null -> Unit
+    }
+}
+
+@Composable
+private fun ProtectionOffBanner(onFix: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Protection is OFF",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onError,
+        )
+        Text(
+            text = "FocusLock is locked, but it can't block anything right now.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onError,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = onFix,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.onError,
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+        ) {
+            Text("Fix it")
+        }
     }
 }

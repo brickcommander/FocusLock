@@ -5,6 +5,7 @@ import dev.focuslock.pin.InMemoryPinStore
 import dev.focuslock.pin.PinHasher
 import dev.focuslock.pin.PinManager
 import dev.focuslock.pin.VerifyResult
+import dev.focuslock.setup.FakeSetupChecker
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -18,15 +19,17 @@ class LockManagerTest {
 
     private lateinit var store: FakeLockStateStore
     private lateinit var clock: FakeClock
+    private lateinit var setup: FakeSetupChecker
     private lateinit var manager: LockManager
 
     @Before
     fun setUp() {
         store = FakeLockStateStore()
         clock = FakeClock()
+        setup = FakeSetupChecker()
         val pinManager = newPinManager()
         runBlocking { pinManager.setPin(PIN) }
-        manager = LockManager(store, pinManager, clock)
+        manager = LockManager(store, pinManager, setup, clock)
     }
 
     private fun newPinManager(): PinManager =
@@ -34,13 +37,42 @@ class LockManagerTest {
 
     @Test
     fun `lock refuses when no pin set`() {
-        val noPinManager = LockManager(store, newPinManager(), clock)
+        val noPinManager = LockManager(store, newPinManager(), setup, clock)
 
         val result = noPinManager.lock()
 
         assertEquals(LockResult.Refused(LockRefusal.NO_PIN), result)
         assertFalse(store.isLocked)
         assertEquals(0L, store.lastAppliedEpochMs)
+    }
+
+    @Test
+    fun `lock refuses when service disabled`() {
+        setup.serviceEnabled = false
+
+        val result = manager.lock()
+
+        assertEquals(LockResult.Refused(LockRefusal.SETUP_INCOMPLETE), result)
+        assertFalse(store.isLocked)
+    }
+
+    @Test
+    fun `lock refuses when admin inactive`() {
+        setup.adminActive = false
+
+        val result = manager.lock()
+
+        assertEquals(LockResult.Refused(LockRefusal.SETUP_INCOMPLETE), result)
+        assertFalse(store.isLocked)
+    }
+
+    @Test
+    fun `lock succeeds when setup complete`() {
+        val result = manager.lock()
+
+        assertEquals(LockResult.Locked, result)
+        assertTrue(manager.setupStatus().isComplete)
+        assertTrue(store.isLocked)
     }
 
     @Test

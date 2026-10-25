@@ -1,6 +1,6 @@
 package dev.focuslock
 
-import android.content.ComponentName
+import android.app.admin.DevicePolicyManager
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -10,7 +10,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import dev.focuslock.blocker.FocusAccessibilityService
 import dev.focuslock.ui.MainScreen
 import dev.focuslock.ui.MainViewModel
 import dev.focuslock.ui.theme.FocusLockTheme
@@ -27,7 +26,6 @@ class MainActivity : ComponentActivity() {
                     lockManager = container.lockManager,
                     lockStateStore = container.lockStateStore,
                     pinManager = container.pinManager,
-                    isBlockerServiceEnabled = ::isBlockerServiceEnabled,
                 )
             }
         }
@@ -44,6 +42,16 @@ class MainActivity : ComponentActivity() {
                     onOpenAccessibilitySettings = {
                         startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     },
+                    onActivateDeviceAdmin = {
+                        startActivity(
+                            Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                                .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, container.setupChecker.adminComponent)
+                                .putExtra(
+                                    DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                                    "Stops FocusLock from being uninstalled while locked.",
+                                )
+                        )
+                    },
                 )
             }
         }
@@ -52,11 +60,5 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refresh()
-    }
-
-    private fun isBlockerServiceEnabled(): Boolean {
-        val ours = ComponentName(this, FocusAccessibilityService::class.java)
-        val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-        return enabled.orEmpty().split(':').any { ComponentName.unflattenFromString(it) == ours }
     }
 }

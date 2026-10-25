@@ -3,12 +3,14 @@ package dev.focuslock.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.focuslock.lock.LockManager
+import dev.focuslock.lock.LockRefusal
 import dev.focuslock.lock.LockResult
 import dev.focuslock.lock.LockStateStoreContract
 import dev.focuslock.lock.UnlockResult
 import dev.focuslock.pin.PinManager
 import dev.focuslock.pin.VerifyResult
 import dev.focuslock.pin.WrongPinException
+import dev.focuslock.setup.SetupStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,21 +29,24 @@ sealed class PinMessage {
 }
 
 data class MainUiState(
-    val isBlockerServiceEnabled: Boolean = false,
+    val setup: SetupStatus = SetupStatus(blockerServiceEnabled = false, deviceAdminActive = false, pinSet = false),
     val isLocked: Boolean = false,
-    val isPinSet: Boolean = false,
     val lastAppliedMs: Long = 0L,
     val pinDialog: PinDialogMode? = null,
     val pinMessage: PinMessage? = null,
     val isBusy: Boolean = false,
     val infoMessage: String? = null,
-)
+) {
+    val isPinSet: Boolean get() = setup.pinSet
+
+    /** Locked, but the service or the admin was turned off, so nothing is actually blocked. */
+    val isProtectionOff: Boolean get() = isLocked && !(setup.blockerServiceEnabled && setup.deviceAdminActive)
+}
 
 class MainViewModel(
     private val lockManager: LockManager,
     private val lockStateStore: LockStateStoreContract,
     private val pinManager: PinManager,
-    private val isBlockerServiceEnabled: () -> Boolean,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
@@ -54,18 +59,20 @@ class MainViewModel(
     fun refresh() {
         _uiState.update {
             it.copy(
-                isBlockerServiceEnabled = isBlockerServiceEnabled(),
+                setup = lockManager.setupStatus(),
                 isLocked = lockStateStore.isLocked,
-                isPinSet = pinManager.isSet(),
                 lastAppliedMs = lockStateStore.lastAppliedEpochMs,
             )
         }
     }
 
     fun lock() {
-        val info = when (lockManager.lock()) {
+        val info = when (val result = lockManager.lock()) {
             LockResult.Locked -> null
-            is LockResult.Refused -> "Set a code first"
+            is LockResult.Refused -> when (result.reason) {
+                LockRefusal.NO_PIN -> "Set a code first"
+                LockRefusal.SETUP_INCOMPLETE -> "Finish the setup checklist first"
+            }
         }
         _uiState.update { it.copy(infoMessage = info) }
         refresh()
