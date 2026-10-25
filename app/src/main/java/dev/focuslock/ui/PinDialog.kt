@@ -49,13 +49,13 @@ fun PinDialog(
                     OutlinedTextField(
                         value = values[index],
                         onValueChange = { input ->
-                            values[index] = input.filter { it in '0'..'9' }.take(PinManager.MAX_LENGTH)
+                            values[index] = input.take(PinManager.MAX_LENGTH)
                         },
                         label = { Text(label) },
                         singleLine = true,
                         enabled = !isBusy,
                         visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -92,7 +92,7 @@ private val timeFormatter: DateTimeFormatter =
 internal fun PinMessage.toText(): String = when (this) {
     is PinMessage.Wrong -> "Wrong code, $remaining ${if (remaining == 1) "try" else "tries"} left"
     is PinMessage.LockedOut -> "Locked out until ${timeFormatter.format(Instant.ofEpochMilli(untilMs))}"
-    PinMessage.InvalidFormat -> "Code must be ${PinManager.MIN_LENGTH}–${PinManager.MAX_LENGTH} digits"
+    PinMessage.InvalidFormat -> "Code must be ${PinManager.MIN_LENGTH}–${PinManager.MAX_LENGTH} characters"
     PinMessage.Mismatch -> "Codes don't match"
     PinMessage.NotSet -> "No code has been set"
     PinMessage.AlreadySet -> "A code is already set"

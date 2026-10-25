@@ -61,12 +61,12 @@ fun BreakDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = pin,
-                    onValueChange = { input -> pin = input.filter { it in '0'..'9' }.take(PinManager.MAX_LENGTH) },
+                    onValueChange = { input -> pin = input.take(PinManager.MAX_LENGTH) },
                     label = { Text("Code") },
                     singleLine = true,
                     enabled = !isBusy,
                     visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 message?.let {

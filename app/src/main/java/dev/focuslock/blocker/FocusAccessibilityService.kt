@@ -103,8 +103,17 @@ class FocusAccessibilityService : AccessibilityService() {
      * performGlobalAction(HOME) is asynchronous (2 s after boot in the spike) and can land on top of it.
      */
     private fun execute(decision: Decision) {
+        // After a site block is dismissed, give the user time to close/switch the tab.
+        if (decision is Decision.BlockSite && System.currentTimeMillis() < BlockedActivity.gracePeriodUntilMs) return
+
         val reason = BlockedReason.describe(decision, (application as FocusApp).container.installedApps::label) ?: return
-        startActivities(arrayOf(BlockedActivity.homeIntent(), BlockedActivity.intent(this, reason)))
+        val isSiteBlock = decision is Decision.BlockSite
+        if (isSiteBlock) {
+            // Site block: just the Blocked screen (no Home), so pressing OK returns to the browser.
+            startActivity(BlockedActivity.intent(this, reason, isSiteBlock = true))
+        } else {
+            startActivities(arrayOf(BlockedActivity.homeIntent(), BlockedActivity.intent(this, reason)))
+        }
         debugLog { "blocked $decision" }
     }
 

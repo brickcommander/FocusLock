@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.focuslock.BuildConfig
+import dev.focuslock.pin.PinManager
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
@@ -177,7 +178,7 @@ fun MainScreen(
     when (state.pinDialog) {
         PinDialogMode.SET -> PinDialog(
             title = "Set unlock code",
-            description = "Friend: enter a 6–12 digit code. Don't share it.",
+            description = "Friend: enter a code (${PinManager.MIN_LENGTH}–${PinManager.MAX_LENGTH} characters). Don't share it.",
             fieldLabels = listOf("New code", "Confirm code"),
             message = state.pinMessage,
             isBusy = state.isBusy,

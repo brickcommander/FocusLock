@@ -90,7 +90,7 @@ class LockManagerTest {
     fun `unlock with wrong pin keeps locked`() = runTest {
         manager.lock()
 
-        val result = manager.unlock("000000")
+        val result = manager.unlock("wrong00000")
 
         assertEquals(UnlockResult.Refused(VerifyResult.Wrong(remaining = 4)), result)
         assertTrue(store.isLocked)
@@ -123,7 +123,7 @@ class LockManagerTest {
     fun `removeCompletely with wrong pin does nothing`() = runTest {
         manager.lock()
 
-        val result = manager.removeCompletely("000000")
+        val result = manager.removeCompletely("wrong00000")
 
         assertEquals(UnlockResult.Refused(VerifyResult.Wrong(remaining = 4)), result)
         assertTrue(store.isLocked)
@@ -166,7 +166,7 @@ class LockManagerTest {
     fun `startBreak with wrong pin starts nothing`() = runTest {
         manager.lock()
 
-        val result = manager.startBreak("000000", hours = 2)
+        val result = manager.startBreak("wrong00000", hours = 2)
 
         assertEquals(BreakResult.Refused(VerifyResult.Wrong(remaining = 4)), result)
         assertEquals(null, store.breakWindow)
@@ -240,7 +240,7 @@ class LockManagerTest {
     }
 
     private companion object {
-        const val PIN = "482916"
+        const val PIN = "test482916"
         const val HOUR_MS = 60 * 60 * 1000L
     }
 }

@@ -111,13 +111,12 @@ class PinManager(
     }
 
     companion object {
-        const val MIN_LENGTH = 6
-        const val MAX_LENGTH = 12
+        const val MIN_LENGTH = 7
+        const val MAX_LENGTH = 30
         const val MAX_ATTEMPTS = 5
         const val LOCKOUT_MS = 60 * 60 * 1000L
-        private const val INVALID_FORMAT = "Code must be 6–12 digits"
-        private val PIN_FORMAT = Regex("^[0-9]{$MIN_LENGTH,$MAX_LENGTH}$")
+        private const val INVALID_FORMAT = "Code must be $MIN_LENGTH–$MAX_LENGTH characters"
 
-        fun isValidFormat(pin: String): Boolean = PIN_FORMAT.matches(pin)
+        fun isValidFormat(pin: String): Boolean = pin.length in MIN_LENGTH..MAX_LENGTH
     }
 }

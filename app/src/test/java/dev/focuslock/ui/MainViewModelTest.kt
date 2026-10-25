@@ -106,7 +106,7 @@ class MainViewModelTest {
         vm.lock()
 
         vm.openPinDialog(PinDialogMode.UNLOCK)
-        vm.submitUnlock("000000")
+        vm.submitUnlock("wrong00000")
 
         assertTrue(vm.uiState.value.isLocked)
         assertEquals(PinMessage.Wrong(remaining = 4), vm.uiState.value.pinMessage)
@@ -212,7 +212,7 @@ class MainViewModelTest {
 
         vm.requestRemoveCompletely()
         vm.confirmRemoveCompletely()
-        vm.submitRemoveCompletely("000000")
+        vm.submitRemoveCompletely("wrong00000")
 
         val state = vm.uiState.value
         assertTrue(state.isLocked)
@@ -265,7 +265,7 @@ class MainViewModelTest {
         vm.lock()
 
         vm.openBreakDialog()
-        vm.submitBreak("000000", hours = 2)
+        vm.submitBreak("wrong00000", hours = 2)
 
         val state = vm.uiState.value
         assertTrue(state.showBreakDialog)
@@ -309,7 +309,7 @@ class MainViewModelTest {
     }
 
     private companion object {
-        const val PIN = "482916"
+        const val PIN = "test482916"
         const val HOUR_MS = 60 * 60 * 1000L
     }
 }
