@@ -66,10 +66,6 @@ class FocusAccessibilityService : AccessibilityService() {
     @Volatile
     private var limitedPackages: Set<String> = emptySet()
 
-    /** Fast in-process filter: never rely solely on serviceInfo.packageNames (Samsung ignores it). */
-    @Volatile
-    private var watchedSet: Set<String> = emptySet()
-
     private val rulesListener: (BlockRules) -> Unit = { newRules ->
         rules = newRules
         updatePackageFilter()
@@ -112,7 +108,6 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val pkg = event.packageName?.toString() ?: return
-        if (pkg !in watchedSet) return // fast in-process filter (Samsung ignores setServiceInfo)
         val isWindowStateChange = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
         debugLog { "event pkg=$pkg type=${event.eventType} class=${event.className}" }
         safely { handle(pkg, isWindowStateChange, eventRoot = { eventWindowRoot(event, pkg) }) }
@@ -246,17 +241,12 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun isInteractive(): Boolean = getSystemService(PowerManager::class.java)?.isInteractive != false
 
-    /**
-     * Updates both the in-process [watchedSet] (authoritative) and
-     * [serviceInfo].packagesNames (best-effort; Samsung One UI may ignore it).
-     * */
+    /** The XML packageNames are only the defaults; the user's lists replace them at runtime. */
     private fun updatePackageFilter() = safely {
-        val pkgs = BlockList.watchedPackages(rules, limitedPackages)
-        watchedSet = pkgs
         val info = serviceInfo ?: return@safely
-        info.packageNames = pkgs.toTypedArray()
+        info.packageNames = BlockList.watchedPackages(rules, limitedPackages).toTypedArray()
         serviceInfo = info
-        debugLog { "watching ${pkgs.size} packages" }
+        debugLog { "watching ${info.packageNames.size} packages" }
     }
 
     override fun onInterrupt() = Unit
