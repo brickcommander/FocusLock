@@ -1,131 +1,170 @@
-# 🔒 FocusLock
+# 🔒 FocusLock — Free Open-Source App & Website Blocker for Android
 
-**FocusLock** is a lightweight, privacy-focused Android app designed to help you regain focus and stop mindlessly scrolling through distracting apps and websites.
+[![Android](https://img.shields.io/badge/Android-11%2B%20%28API%2030--37%20Supported%20--%20Android%2016 Ready%29-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/brickcommander/FocusLock)
+[![Language](https://img.shields.io/badge/Language-Kotlin%20100%25-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://github.com/brickcommander/FocusLock)
+[![UI](https://img.shields.io/badge/UI-Jetpack%20Compose%20%26%20Material%203-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://github.com/brickcommander/FocusLock)
+[![Battery](https://img.shields.io/badge/Battery-0%25%20Drain%20%28No%20VPN%2FServices%29-brightgreen?style=for-the-badge&logo=battery&logoColor=white)](https://github.com/brickcommander/FocusLock)
+[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20%28No%20Internet%20Permission%29-blue?style=for-the-badge&logo=shield&logoColor=white)](https://github.com/brickcommander/FocusLock)
+[![APK Download](https://img.shields.io/badge/Download-Release%20APK%20%28Direct%29-FF6F00?style=for-the-badge&logo=android&logoColor=white)](FocusLock.apk)
 
-Unlike intrusive blockers that drain your battery with continuous background VPNs or require complex ADB commands, FocusLock uses Android's native Accessibility Service and Device Administrator APIs to enforce strict blocking with **zero battery drain** and **100% offline privacy**.
+**FocusLock** is a powerful, lightweight, and 100% free open-source **Android app blocker**, **website blocker**, and **digital detox productivity tool**. It helps you stop mindlessly scrolling social media, defeat phone addiction, set daily screen time limits, and build deep focus habits.
 
----
-
-## 📸 Key Features
-
-- **📱 App Blocking**: Block social media and distracting apps (e.g., Instagram, YouTube, Reddit, custom installed apps).
-- **🌐 Website Blocking**: Block distracting websites (e.g., `youtube.com`, `reddit.com`, `instagram.com`) directly inside supported browsers (Google Chrome, Brave Browser) without needing a VPN.
-- **⏱️ Daily Usage Limits**: Set per-app daily time allowances (e.g., max 30 mins/day on Instagram). Limits reset automatically every local calendar midnight and apply regardless of lock state.
-- **🎯 Focus Sessions**: Lock yourself into a 1-to-6 hour strict focus session that **cannot be ended early** under any circumstances.
-- **☕ Breaks**: Take timed, passcode-protected breaks when you genuinely need brief access.
-- **🔑 Friend Passcode Protection**: Store your unlock PIN as an irreversible cryptographic hash. Hand your phone to a trusted friend or family member to set the code so you can't bypass your own rules in weak moments.
-- **🛡️ Smart Self-Protection**: Prevents force-stopping, clearing data/cache, or disabling permissions in Android Settings while FocusLock is locked.
-- **🔋 Zero Battery Drain & Offline Privacy**: 
-  - Uses **0 background services**, **no WorkManager**, **no alarms**, and **no VPN**.
-  - Requires **NO internet permission** (`android.permission.INTERNET` is omitted completely).
-  - All decisions are computed locally in milliseconds.
+Unlike intrusive distraction blockers that drain your battery with background VPNs or require paid subscriptions, FocusLock leverages Android's native Accessibility Service and Device Administrator APIs to enforce strict blocking with **zero battery drain**, **no subscriptions**, and **100% offline privacy**.
 
 ---
 
-## 📥 Fast Download & Installation
+## ⚡ Quick Download
 
-### Option 1: Direct APK Download (Easiest)
-You can directly download the official release APK pre-built at the root of this repository:
+Download the official pre-compiled Android release package directly from this repository:
 
-👉 **[Download FocusLock.apk](FocusLock.apk)** (or download from the GitHub repository files above).
+👉 **[📥 Download FocusLock.apk (Direct Release)](FocusLock.apk)**
 
-#### How to Install:
-1. Download `FocusLock.apk` onto your Android phone.
-2. Open your device file manager or browser downloads and tap `FocusLock.apk`.
-3. If prompted, enable **"Allow from this source"** / **"Install unknown apps"** in your device settings.
+---
+
+## 🚀 Why Choose FocusLock? (Feature Comparison)
+
+| Feature | FocusLock | Other Free App Blockers | Paid Blockers (Opal / Freedom / One Sec) |
+| :--- | :---: | :---: | :---: |
+| **100% Free & Open-Source** | ✅ Yes | ❌ Limited Free Tier | ❌ $5 - $15/month |
+| **Zero Battery Drain (No VPN)** | ✅ Yes | ❌ High Battery Drain | ❌ Runs Background VPN |
+| **Tamper-Proof Friend Passcode** | ✅ Yes | ❌ Easy to Bypass | ❌ Requires Subscription |
+| **Website Blocker (Chrome & Brave)** | ✅ Yes | ❌ Premium Feature | ✅ Yes |
+| **Daily App Usage Time Budgets** | ✅ Yes | ❌ Basic / Paid | ✅ Yes |
+| **Un-cancelable Strict Focus Sessions** | ✅ Yes | ❌ Easy to Cancel | ✅ Yes |
+| **100% Offline & Zero Data Tracking** | ✅ Yes (No Internet Perm) | ❌ Cloud / Analytics | ❌ Requires Account Creation |
+| **Self-Protection (Anti-Uninstall)** | ✅ Yes (Device Admin Guard) | ❌ Easy to Uninstall | ❌ Partial |
+
+---
+
+## ✨ Key Features & Capabilities
+
+### 📱 1. Social Media & App Blocker
+Instantly block distracting apps like **Instagram, TikTok, YouTube, Reddit, X (Twitter), Facebook, Snapchat, and games**. Opening a blocked app immediately redirects you to a clean "🔒 Blocked by FocusLock" screen and sends you back home.
+
+### 🌐 2. Website Blocker for Android Browsers (No VPN)
+Block distracting websites (e.g., `youtube.com`, `reddit.com`, `instagram.com`, `twitter.com`, or any custom domain) directly inside **Google Chrome** and **Brave Browser**. Unlike other web blockers, FocusLock **does not run a VPN** or slow down your internet speed.
+
+### ⏱️ 3. Daily App Usage Time Budgets
+Set daily screen time limits per app (e.g., max 30 minutes on Instagram per day). Daily usage tracks automatically and resets every local calendar midnight. Once your daily limit is exceeded, the app is blocked until tomorrow!
+
+### 🎯 4. Strict Un-cancelable Focus Sessions
+Need hours of uninterrupted deep work or study time? Start a **1 to 6-hour strict Focus Session**. During an active session, **unlocking is disabled** and the session **cannot be cancelled early**, even with the friend passcode.
+
+### 🔑 5. Tamper-Proof Friend Passcode Protection
+Most app blockers fail because you can easily unlock them during moments of weak willpower. FocusLock solves this by requiring a **Friend Passcode**. Passcodes are hashed irreversibly using salted SHA-256. Hand your phone to a trusted friend or family member to set a secret code that only they know!
+
+### 🛡️ 6. Anti-Bypass & Self-Protection (Device Admin Guard)
+FocusLock includes a smart **Settings Guard** powered by Android Device Administrator permissions. While locked, FocusLock automatically blocks access to Android Settings screens that could be used to Force Stop, Clear Data/Cache, Disable Accessibility, or Uninstall the app.
+
+### 🔋 7. Zero Battery Drain & 100% Private Architecture
+- **0% Battery Impact**: Uses zero background workers, zero alarms, and no polling loops. The event listener only runs when you interact with specified blocked apps.
+- **100% Offline & Private**: FocusLock explicitly **omits the `INTERNET` permission** (`android.permission.INTERNET`) from its code. Your data never leaves your device.
+
+---
+
+## 📥 Installation & 1-Minute Setup Guide
+
+### Step 1: Download & Install the APK
+1. Download **[FocusLock.apk](FocusLock.apk)** directly onto your Android device.
+2. Open your File Manager or Browser Downloads and tap `FocusLock.apk`.
+3. If prompted by Android, toggle **"Allow installation from this source"** or **"Install unknown apps"**.
 4. Tap **Install** and open **FocusLock**.
 
----
+### Step 2: Complete the 1-Minute Setup Checklist
+When launching FocusLock for the first time, complete the 3 steps on the setup screen:
 
-## 🚀 Initial Setup Guide (1 Minute)
+1. **Enable Accessibility Service**: Tap **Enable** $\rightarrow$ Select **FocusLock** under Installed Apps / Downloaded Apps $\rightarrow$ Toggle **ON**.
+2. **Activate Device Admin**: Tap **Activate** $\rightarrow$ Tap **Activate this device admin app** on the Android system screen. *(Prevents force-stopping or uninstalling while locked)*.
+3. **Set Friend Passcode**: Tap **Set Code** $\rightarrow$ Hand your phone to a trusted friend or partner to set a secret 4-to-12 digit PIN code.
 
-When you launch FocusLock for the first time, complete the 3 setup steps shown on the home checklist:
-
-1. **Enable Accessibility Service**:
-   - Tap **Enable** next to Accessibility Service.
-   - Find **FocusLock** in your phone's Accessibility settings and toggle it **ON**.
-2. **Activate Device Admin**:
-   - Tap **Activate** next to Device Admin.
-   - Tap **Activate this device admin app** on the Android system prompt. (This prevents FocusLock from being uninstalled or force-stopped while locked).
-3. **Set Passcode**:
-   - Hand your phone to a trusted friend or family member.
-   - Have them enter a secret 4-to-12 digit code that only they know.
-
-Once all three steps are completed, your setup checklist turns green and protection is fully active!
+Once setup is complete, all status lights turn green!
 
 ---
 
 ## 📖 How to Use FocusLock
 
-### 1. Starting & Unlocking Protection
-- **Lock**: Tap the big **Lock** button on the main screen to activate blocking immediately.
-- **Unlock**: Tap **Unlock**. Your friend must enter the secret code to disarm protection.
+### 🔒 Locking & Unlocking
+- **Lock**: Tap **Lock** on the home screen to activate blocking immediately.
+- **Unlock**: Tap **Unlock** and enter your friend's secret PIN code to disable protection.
 
-### 2. Customizing the Block List
-Tap **Block list** under the Manage section:
-- **Apps**: View or search your installed apps and toggle which apps should be blocked when locked.
-- **Websites**: Add host suffixes (e.g., `twitter.com`, `tiktok.com`, `facebook.com`) to block them inside browsers.
+### 📋 Customizing Your Block List
+Tap **Block list** under Manage:
+- **Apps Tab**: Search through all installed apps on your device and toggle blocking ON/OFF.
+- **Websites Tab**: Add custom website domain suffixes (e.g., `facebook.com`, `twitch.tv`, `netflix.com`).
 
-### 3. Setting Daily Time Limits
+### ⏳ Setting Daily Time Limits
 Tap **Daily limits** under Manage:
-- Choose any app and set allowed minutes per day (or select specific days of the week).
-- Once your time budget for the day is used up, FocusLock automatically blocks that app until midnight.
+- Select any app and choose allowed minutes per day (or set custom rules per day of the week).
+- When the timer runs out, FocusLock automatically blocks the app until local midnight.
 
-### 4. Focus Sessions
-Tap **Focus session** under Sessions:
-- Select a duration from **1 hour to 6 hours**.
-- During an active Focus Session, **unlocking is disabled** and the session **cannot be ended early**, even with the PIN.
+### ☕ Taking a Timed Break
+Need brief access to a blocked app during the day?
+1. Tap **Take a break** on the main screen.
+2. Enter your friend's secret PIN.
+3. Select break duration (e.g., 15 minutes). FocusLock pauses blocking and automatically re-arms when time expires.
 
-### 5. Taking a Break
-- Tap **Take a break** while locked.
-- Enter the friend PIN and select break duration (e.g. 15 mins). FocusLock will pause blocking and automatically resume when time expires.
-
-### 6. Uninstalling FocusLock
-To prevent unauthorized removal during weak moments, FocusLock blocks access to its own Android Settings & Device Admin uninstall screens while locked.
-To completely remove FocusLock:
+### 🗑️ Complete Removal & Uninstallation
+Because FocusLock prevents unauthorized uninstallation while locked, use the built-in uninstall flow when you want to remove the app:
 1. Open **FocusLock**.
-2. Scroll to the bottom and tap **Remove FocusLock**.
-3. Enter your friend's PIN code.
-4. FocusLock will cleanly deactivate Device Admin, clear its data, and open the system uninstall prompt.
+2. Scroll to the bottom and tap **Remove FocusLock** (highlighted in red).
+3. Enter your friend's secret PIN code.
+4. FocusLock cleanly deactivates Device Admin, resets storage, and opens the system uninstall prompt.
 
 ---
 
-## 🛠️ Building from Source
+## ❓ Frequently Asked Questions (FAQ)
 
-If you prefer to compile FocusLock yourself using Gradle or Android Studio:
+### Q: Is FocusLock completely free? Are there any hidden subscriptions?
+**A:** Yes, FocusLock is 100% free and open-source. There are no paid tiers, ads, tracking, or monthly subscriptions.
+
+### Q: How does website blocking work in Chrome without a VPN?
+**A:** FocusLock reads the browser's URL address bar text via Android's native Accessibility API in real-time. When a blocked domain (like `youtube.com`) is detected, FocusLock immediately sends you back to your home screen. This requires no network redirection, no VPN, and zero battery overhead.
+
+### Q: Does FocusLock track my browsing history or personal data?
+**A:** **No, absolutely not.** FocusLock contains **no internet permission** (`android.permission.INTERNET`). It is physically impossible for the app to send data outside your phone. All URL checks and app checks happen in-memory locally on your device.
+
+### Q: What prevents me from disabling Accessibility or uninstalling FocusLock?
+**A:** When locked, FocusLock's **Settings Guard** inspects system screens in real time. If you open Android Settings to force-stop, clear cache, disable Accessibility, or deactivate Device Admin for FocusLock, the guard immediately closes Settings and sends you home. The only way to remove protection is by entering the friend passcode inside FocusLock.
+
+### Q: What happens if I forget my friend passcode?
+**A:** FocusLock passcodes are designed to enforce self-control. If you forget your code, your friend who created it must enter it for you. Debug builds include an optional dev bypass for developers testing on emulators.
+
+---
+
+## 🛠️ Developer Setup & Building from Source
+
+FocusLock is built with modern Android engineering standards:
+- **Language**: 100% Kotlin
+- **UI Toolkit**: Jetpack Compose + Material 3 Theme
+- **Architecture**: Single-activity, manual dependency injection (`AppContainer`), pure Kotlin decision engines (`BlockDecider`, `HostMatcher`, `SettingsGuard`).
+- **Dependencies**: Minimal (Compose BOM, Activity Compose, Lifecycle ViewModel, Core KTX). No Room, no DataStore, no Hilt, no Koin, no third-party network libraries.
 
 ### Prerequisites
-- Android Studio Ladybug / Android Studio 2024.2+ or JDK 11+
+- Android Studio 2024.2+ (Ladybug or newer)
+- JDK 11+
 - Android SDK (compileSdk 37, minSdk 30)
 
-### Commands
-Clone the repository:
+### Clone & Build
 ```bash
+# Clone the repository
 git clone https://github.com/brickcommander/FocusLock.git
 cd FocusLock
-```
 
-Build the release APK:
-```bash
+# Build release APK
 ./gradlew app:assembleRelease
-```
-The compiled APK will be at `app/build/outputs/apk/release/app-release.apk`.
 
-Run unit tests:
-```bash
+# Run unit tests
 ./gradlew test
 ```
+The generated APK file will be at `app/build/outputs/apk/release/app-release.apk`.
 
 ---
 
-## 🔒 Security & Privacy Guarantees
-
-- **No Network Requests**: The app manifest contains no `INTERNET` permission. FocusLock cannot send or receive data over the network.
-- **Local Data Only**: Passcodes are hashed with SHA-256 and stored locally in app-private `SharedPreferences`.
-- **Zero Background Tracking**: Screen content and URL bars are inspected purely in-memory by local matchers to identify blocked hosts, and are never logged or saved to disk.
+## 🏷️ Search Keywords & Topics
+`android-app-blocker` `website-blocker` `digital-detox` `screen-time-limits` `focus-app` `productivity-tool` `open-source-android-app` `social-media-blocker` `chrome-site-blocker` `jetpack-compose` `android-accessibility-service` `no-vpn` `zero-battery-drain` `friend-passcode` `anti-uninstall`
 
 ---
 
-## 📄 License
+## 📜 License
 
-This project is provided open-source for personal use and productivity.
+FocusLock is open-source software provided under the [MIT License](LICENSE) for personal productivity and self-improvement.
