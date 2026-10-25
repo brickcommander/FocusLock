@@ -7,6 +7,7 @@ package dev.focuslock.lock
 class FakeLockStateStore : LockStateStoreContract {
     private val listeners = mutableSetOf<(Boolean) -> Unit>()
     private val breakListeners = mutableSetOf<(BreakWindow?) -> Unit>()
+    private val focusListeners = mutableSetOf<(FocusSession?) -> Unit>()
 
     override var isLocked: Boolean = false
         set(value) {
@@ -24,6 +25,13 @@ class FakeLockStateStore : LockStateStoreContract {
             breakListeners.toList().forEach { it(value) }
         }
 
+    override var focusSession: FocusSession? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            focusListeners.toList().forEach { it(value) }
+        }
+
     override fun addListener(listener: (Boolean) -> Unit) {
         listeners.add(listener)
     }
@@ -38,5 +46,13 @@ class FakeLockStateStore : LockStateStoreContract {
 
     override fun removeBreakListener(listener: (BreakWindow?) -> Unit) {
         breakListeners.remove(listener)
+    }
+
+    override fun addFocusListener(listener: (FocusSession?) -> Unit) {
+        focusListeners.add(listener)
+    }
+
+    override fun removeFocusListener(listener: (FocusSession?) -> Unit) {
+        focusListeners.remove(listener)
     }
 }

@@ -60,6 +60,7 @@ fun MainScreen(
     onActivateDeviceAdmin: () -> Unit,
     onRequestUninstall: () -> Unit,
     onOpenBlockList: () -> Unit,
+    onOpenLimits: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -88,7 +89,7 @@ fun MainScreen(
             }
 
             // ── Status card ──
-            StatusCard(isLocked = state.isLocked, lastAppliedMs = state.lastAppliedMs)
+            StatusCard(isLocked = state.isLocked, lastAppliedMs = state.lastAppliedMs, focusUntilMs = state.focusUntilMs)
 
             // ── Lock / Unlock ──
             Row(
@@ -109,7 +110,7 @@ fun MainScreen(
                 }
                 OutlinedButton(
                     onClick = { viewModel.openPinDialog(PinDialogMode.UNLOCK) },
-                    enabled = state.isLocked,
+                    enabled = state.isLocked && !state.isInFocus,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                 ) {
@@ -117,9 +118,15 @@ fun MainScreen(
                 }
             }
 
-            // ── Break ──
+            // ── Focus session / break ──
+            val focusUntil = state.focusUntilMs
             val breakUntil = state.breakUntilMs
-            if (breakUntil != null) {
+            if (focusUntil != null) {
+                LaunchedEffect(focusUntil) {
+                    delay((focusUntil - System.currentTimeMillis()).coerceAtLeast(0L))
+                    viewModel.refresh()
+                }
+            } else if (breakUntil != null) {
                 BreakBanner(breakUntil = breakUntil, onEnd = viewModel::endBreak)
                 LaunchedEffect(breakUntil) {
                     delay((breakUntil - System.currentTimeMillis()).coerceAtLeast(0L))
@@ -130,6 +137,13 @@ fun MainScreen(
                     label = "Take a break",
                     secondary = "Temporarily unblock everything",
                     onClick = viewModel::openBreakDialog,
+                )
+            }
+            if (focusUntil == null && state.setup.isComplete) {
+                MenuItem(
+                    label = "Start focus session",
+                    secondary = "Block everything for 1\u20136 hours. Can't be ended early.",
+                    onClick = viewModel::openFocusDialog,
                 )
             }
 
@@ -162,6 +176,12 @@ fun MainScreen(
                     label = if (state.isLocked) "View block list" else "Edit block list",
                     secondary = "Apps and websites",
                     onClick = onOpenBlockList,
+                    showDivider = true,
+                )
+                MenuItem(
+                    label = "Daily limits",
+                    secondary = "Daily time allowance for blocked apps",
+                    onClick = onOpenLimits,
                     showDivider = state.isPinSet,
                 )
                 if (state.isPinSet) {
@@ -172,7 +192,7 @@ fun MainScreen(
                 }
             }
 
-            if (state.isPinSet) {
+            if (state.isPinSet && !state.isInFocus) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Surface {
                     MenuItem(
@@ -255,6 +275,10 @@ fun MainScreen(
         )
     }
 
+    if (state.showFocusDialog) {
+        FocusSessionDialog(onStart = viewModel::startFocusSession, onDismiss = viewModel::dismissFocusDialog)
+    }
+
     if (state.showRemoveConfirm) {
         AlertDialog(
             onDismissRequest = viewModel::cancelRemoveCompletely,
@@ -285,9 +309,10 @@ fun MainScreen(
 // ─── Shared components ───
 
 @Composable
-private fun StatusCard(isLocked: Boolean, lastAppliedMs: Long) {
+private fun StatusCard(isLocked: Boolean, lastAppliedMs: Long, focusUntilMs: Long?) {
+    val blocking = isLocked || focusUntilMs != null
     val dotColor by animateColorAsState(
-        targetValue = if (isLocked) StatusLocked else StatusUnlocked,
+        targetValue = if (blocking) StatusLocked else StatusUnlocked,
         animationSpec = tween(400),
         label = "dot",
     )
@@ -310,11 +335,21 @@ private fun StatusCard(isLocked: Boolean, lastAppliedMs: Long) {
         Spacer(modifier = Modifier.width(14.dp))
         Column {
             Text(
-                text = if (isLocked) "Locked" else "Unlocked",
+                text = when {
+                    focusUntilMs != null -> "Focus session"
+                    isLocked -> "Locked"
+                    else -> "Unlocked"
+                },
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            if (isLocked && lastAppliedMs > 0L) {
+            if (focusUntilMs != null) {
+                Text(
+                    text = "Until ${timeFormatter.format(Instant.ofEpochMilli(focusUntilMs))} \u00B7 can't be ended early",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (isLocked && lastAppliedMs > 0L) {
                 Text(
                     text = "Since ${timeFormatter.format(Instant.ofEpochMilli(lastAppliedMs))}",
                     style = MaterialTheme.typography.bodySmall,

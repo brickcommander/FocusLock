@@ -2,7 +2,7 @@
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagReportViewIds"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"
     android:packageNames="com.instagram.android,com.instagram.lite,com.google.android.youtube,com.reddit.frontpage,com.sec.android.app.sbrowser,org.mozilla.firefox,com.brave.browser,com.android.chrome,com.android.settings"

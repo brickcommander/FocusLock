@@ -5,6 +5,9 @@ import dev.focuslock.pin.VerifyResult
 sealed class UnlockResult {
     data object Unlocked : UnlockResult()
     data class Refused(val reason: VerifyResult) : UnlockResult()
+
+    /** A focus session can't be ended early, not even with the code. */
+    data class InFocusSession(val untilMs: Long) : UnlockResult()
 }
 
 enum class LockRefusal { NO_PIN, SETUP_INCOMPLETE }
@@ -19,4 +22,12 @@ sealed class BreakResult {
     data object NotLocked : BreakResult()
     data object InvalidHours : BreakResult()
     data class Refused(val reason: VerifyResult) : BreakResult()
+    data class InFocusSession(val untilMs: Long) : BreakResult()
+}
+
+sealed class FocusResult {
+    data class Started(val session: FocusSession) : FocusResult()
+    data object InvalidHours : FocusResult()
+    data class Refused(val reason: LockRefusal) : FocusResult()
+    data class AlreadyActive(val untilMs: Long) : FocusResult()
 }

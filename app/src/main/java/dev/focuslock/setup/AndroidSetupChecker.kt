@@ -9,7 +9,8 @@ import dev.focuslock.blocker.FocusAccessibilityService
 
 class AndroidSetupChecker(private val context: Context) : SetupChecker {
 
-    private val dpm = context.getSystemService(DevicePolicyManager::class.java)
+    /** Null on devices without FEATURE_DEVICE_ADMIN. */
+    private val dpm: DevicePolicyManager? = context.getSystemService(DevicePolicyManager::class.java)
 
     val adminComponent = ComponentName(context, FocusAdminReceiver::class.java)
 
@@ -26,9 +27,14 @@ class AndroidSetupChecker(private val context: Context) : SetupChecker {
     }
 
     /** The only DevicePolicyManager calls: "active admin" status and self-removal, no policies. */
-    override fun isDeviceAdminActive(): Boolean = dpm.isAdminActive(adminComponent)
+    override fun isDeviceAdminActive(): Boolean = dpm?.isAdminActive(adminComponent) == true
 
+    /** Best effort: if it fails, the uninstall screen still lets the user deactivate the admin. */
     override fun deactivateAdmin() {
-        if (isDeviceAdminActive()) dpm.removeActiveAdmin(adminComponent)
+        if (!isDeviceAdminActive()) return
+        try {
+            dpm?.removeActiveAdmin(adminComponent)
+        } catch (_: SecurityException) {
+        }
     }
 }

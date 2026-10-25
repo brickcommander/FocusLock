@@ -123,7 +123,7 @@ class BlockListViewModelTest {
         vm.removeApp(INSTAGRAM.packageName)
 
         assertTrue(vm.uiState.value.isLocked)
-        assertEquals("Unlock first to change the block list", vm.uiState.value.message)
+        assertEquals("Unlock first to change the block list (not possible during a focus session)", vm.uiState.value.message)
         assertEquals(listOf("youtube.com"), vm.uiState.value.sites)
         assertEquals(listOf(INSTAGRAM), vm.uiState.value.apps)
     }

@@ -9,7 +9,7 @@ class DecisionThrottle(private val clock: Clock, private val windowMs: Long = 1_
 
     /** true = execute; false = same decision fired within windowMs, skip */
     fun shouldFire(decision: Decision): Boolean {
-        if (decision == Decision.Allow) return false
+        if (decision == Decision.Allow || decision is Decision.AllowTimed) return false
 
         val now = clock.nowMs()
         if (decision == lastDecision && now - lastFiredMs < windowMs) return false

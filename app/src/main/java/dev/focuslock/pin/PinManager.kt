@@ -13,6 +13,9 @@ sealed class VerifyResult {
     data class Wrong(val remaining: Int) : VerifyResult()
     data class LockedOut(val untilMs: Long) : VerifyResult()
     data object NotSet : VerifyResult()
+
+    /** Nothing was typed. Not counted as an attempt (and PBKDF2 rejects empty passwords). */
+    data object Empty : VerifyResult()
 }
 
 class WrongPinException(val result: VerifyResult) : Exception("Code not accepted: $result")
@@ -55,8 +58,10 @@ class PinManager(
         return Result.success(Unit)
     }
 
+    /** Only empty input is rejected up front: a code set under an older format rule must still verify. */
     private fun verifyLocked(pin: String): VerifyResult {
         if (!isSet()) return VerifyResult.NotSet
+        if (pin.isEmpty()) return VerifyResult.Empty
 
         val now = clock.nowMs()
         var lockoutUntil = store.lockoutUntilEpochMs

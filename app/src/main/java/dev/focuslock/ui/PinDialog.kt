@@ -103,4 +103,6 @@ internal fun PinMessage.toText(): String = when (this) {
     PinMessage.Mismatch -> "Codes don\u2019t match."
     PinMessage.NotSet -> "No code has been set."
     PinMessage.AlreadySet -> "A code is already set."
+    PinMessage.Empty -> "Enter the code."
+    PinMessage.Failed -> "Something went wrong. Try again."
 }

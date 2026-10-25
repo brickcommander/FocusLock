@@ -18,9 +18,13 @@ object BlockedReason {
 
     /** @param appLabel looks up the installed app's name for apps the user added. */
     fun describe(decision: Decision, appLabel: (String) -> String? = { null }): String? = when (decision) {
-        Decision.Allow -> null
-        is Decision.BlockApp -> appNames[decision.pkg] ?: appLabel(decision.pkg) ?: decision.pkg
+        Decision.Allow, is Decision.AllowTimed -> null
+        is Decision.BlockApp -> appName(decision.pkg, appLabel)
+        is Decision.LimitReached -> "${appName(decision.pkg, appLabel)}: daily limit reached. Resets at midnight."
         is Decision.BlockSite -> decision.host
         Decision.BlockSettings -> SETTINGS_SCREEN
     }
+
+    private fun appName(pkg: String, appLabel: (String) -> String?): String =
+        appNames[pkg] ?: appLabel(pkg) ?: pkg
 }

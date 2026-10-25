@@ -308,6 +308,84 @@ class MainViewModelTest {
         assertFalse(vm.uiState.value.isLocked)
     }
 
+    @Test
+    fun `break with an empty code asks for the code instead of crashing`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+        vm.openBreakDialog()
+
+        vm.submitBreak("", hours = 2)
+
+        assertEquals(PinMessage.Empty, vm.uiState.value.pinMessage)
+        assertTrue(vm.uiState.value.showBreakDialog)
+        assertNull(vm.uiState.value.breakUntilMs)
+        assertFalse(vm.uiState.value.isBusy)
+    }
+
+    @Test
+    fun `empty code is refused everywhere without using an attempt`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        vm.openPinDialog(PinDialogMode.UNLOCK)
+        vm.submitUnlock("")
+        assertEquals(PinMessage.Empty, vm.uiState.value.pinMessage)
+
+        vm.openPinDialog(PinDialogMode.REMOVE)
+        vm.submitRemoveCompletely("")
+        assertEquals(PinMessage.Empty, vm.uiState.value.pinMessage)
+
+        vm.openPinDialog(PinDialogMode.CHANGE)
+        vm.submitChangePin("", "newcode123", "newcode123")
+        assertEquals(PinMessage.Empty, vm.uiState.value.pinMessage)
+
+        vm.openPinDialog(PinDialogMode.UNLOCK)
+        vm.submitUnlock("wrong-code")
+        assertEquals(PinMessage.Wrong(remaining = 4), vm.uiState.value.pinMessage)
+        assertTrue(vm.uiState.value.isLocked)
+    }
+
+    @Test
+    fun `focus session shows on screen and refuses unlock`() {
+        val vm = createViewModelWithPin()
+        vm.openFocusDialog()
+
+        vm.startFocusSession(2)
+
+        assertFalse(vm.uiState.value.showFocusDialog)
+        assertEquals(clock.now + 2 * HOUR_MS, vm.uiState.value.focusUntilMs)
+        assertTrue(vm.uiState.value.isInFocus)
+
+        vm.lock()
+        vm.openPinDialog(PinDialogMode.UNLOCK)
+        vm.submitUnlock(PIN)
+
+        assertTrue(vm.uiState.value.isLocked)
+        assertNull(vm.uiState.value.pinDialog)
+        assertEquals("A focus session is running. It can't be ended early.", vm.uiState.value.infoMessage)
+    }
+
+    @Test
+    fun `focus session needs a finished setup`() {
+        val vm = createViewModel()
+
+        vm.startFocusSession(1)
+
+        assertNull(vm.uiState.value.focusUntilMs)
+        assertEquals("Set a code first", vm.uiState.value.infoMessage)
+    }
+
+    @Test
+    fun `focus session disappears once it is over`() {
+        val vm = createViewModelWithPin()
+        vm.startFocusSession(1)
+
+        clock.advance(HOUR_MS)
+        vm.refresh()
+
+        assertNull(vm.uiState.value.focusUntilMs)
+    }
+
     private companion object {
         const val PIN = "test482916"
         const val HOUR_MS = 60 * 60 * 1000L

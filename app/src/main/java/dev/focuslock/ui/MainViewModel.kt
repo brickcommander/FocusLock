@@ -3,6 +3,7 @@ package dev.focuslock.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.focuslock.lock.BreakResult
+import dev.focuslock.lock.FocusResult
 import dev.focuslock.lock.LockManager
 import dev.focuslock.lock.LockRefusal
 import dev.focuslock.lock.LockResult
@@ -12,6 +13,7 @@ import dev.focuslock.pin.PinManager
 import dev.focuslock.pin.VerifyResult
 import dev.focuslock.pin.WrongPinException
 import dev.focuslock.setup.SetupStatus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +29,8 @@ sealed class PinMessage {
     data object Mismatch : PinMessage()
     data object NotSet : PinMessage()
     data object AlreadySet : PinMessage()
+    data object Empty : PinMessage()
+    data object Failed : PinMessage()
 }
 
 data class MainUiState(
@@ -42,8 +46,12 @@ data class MainUiState(
     val showBreakDialog: Boolean = false,
     /** End of the break that is active right now, else null. */
     val breakUntilMs: Long? = null,
+    /** End of the focus session that is running right now, else null. */
+    val focusUntilMs: Long? = null,
+    val showFocusDialog: Boolean = false,
 ) {
     val isPinSet: Boolean get() = setup.pinSet
+    val isInFocus: Boolean get() = focusUntilMs != null
 
     /** Locked, but the service or the admin was turned off, so nothing is actually blocked. */
     val isProtectionOff: Boolean get() = isLocked && !(setup.blockerServiceEnabled && setup.deviceAdminActive)
@@ -69,6 +77,7 @@ class MainViewModel(
                 isLocked = lockStateStore.isLocked,
                 lastAppliedMs = lockStateStore.lastAppliedEpochMs,
                 breakUntilMs = lockManager.activeBreak()?.untilMs,
+                focusUntilMs = lockManager.activeFocusSession()?.untilMs,
             )
         }
     }
@@ -76,10 +85,7 @@ class MainViewModel(
     fun lock() {
         val info = when (val result = lockManager.lock()) {
             LockResult.Locked -> null
-            is LockResult.Refused -> when (result.reason) {
-                LockRefusal.NO_PIN -> "Set a code first"
-                LockRefusal.SETUP_INCOMPLETE -> "Finish the setup checklist first"
-            }
+            is LockResult.Refused -> result.reason.message()
         }
         _uiState.update { it.copy(infoMessage = info) }
         refresh()
@@ -112,6 +118,7 @@ class MainViewModel(
             when (val result = lockManager.unlock(pin)) {
                 UnlockResult.Unlocked -> closeDialog(info = null)
                 is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
+                is UnlockResult.InFocusSession -> closeDialog(info = FOCUS_REFUSAL)
             }
         }
     }
@@ -155,6 +162,10 @@ class MainViewModel(
                     it.copy(infoMessage = "Choose ${LockManager.BREAK_HOURS.first}–${LockManager.BREAK_HOURS.last} hours")
                 }
                 is BreakResult.Refused -> showPinMessage(result.reason.toPinMessage())
+                is BreakResult.InFocusSession -> {
+                    _uiState.update { it.copy(showBreakDialog = false, infoMessage = FOCUS_REFUSAL) }
+                    refresh()
+                }
             }
         }
     }
@@ -184,8 +195,28 @@ class MainViewModel(
                     closeDialog(info = "Protection removed. Confirm the uninstall.")
                 }
                 is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
+                is UnlockResult.InFocusSession -> closeDialog(info = FOCUS_REFUSAL)
             }
         }
+    }
+
+    fun openFocusDialog() {
+        _uiState.update { it.copy(showFocusDialog = true, infoMessage = null) }
+    }
+
+    fun dismissFocusDialog() {
+        _uiState.update { it.copy(showFocusDialog = false) }
+    }
+
+    fun startFocusSession(hours: Int) {
+        val info = when (val result = lockManager.startFocusSession(hours)) {
+            is FocusResult.Started -> null
+            is FocusResult.AlreadyActive -> "A focus session is already running"
+            FocusResult.InvalidHours -> "Choose ${LockManager.FOCUS_HOURS.joinToString(", ")} hours"
+            is FocusResult.Refused -> result.reason.message()
+        }
+        _uiState.update { it.copy(showFocusDialog = false, infoMessage = info) }
+        refresh()
     }
 
     fun onUninstallLaunched() {
@@ -203,6 +234,10 @@ class MainViewModel(
         viewModelScope.launch {
             try {
                 block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                showPinMessage(PinMessage.Failed)
             } finally {
                 _uiState.update { it.copy(isBusy = false) }
             }
@@ -222,6 +257,16 @@ class MainViewModel(
         is VerifyResult.Wrong -> PinMessage.Wrong(remaining)
         is VerifyResult.LockedOut -> PinMessage.LockedOut(untilMs)
         VerifyResult.NotSet -> PinMessage.NotSet
-        VerifyResult.Ok -> error("Ok is not a refusal")
+        VerifyResult.Empty -> PinMessage.Empty
+        VerifyResult.Ok -> PinMessage.Failed
+    }
+
+    private fun LockRefusal.message(): String = when (this) {
+        LockRefusal.NO_PIN -> "Set a code first"
+        LockRefusal.SETUP_INCOMPLETE -> "Finish the setup checklist first"
+    }
+
+    private companion object {
+        const val FOCUS_REFUSAL = "A focus session is running. It can't be ended early."
     }
 }

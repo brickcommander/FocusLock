@@ -51,6 +51,12 @@
             android:theme="@style/Theme.FocusLock"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".ui.LimitsActivity"
+            android:exported="false"
+            android:label="Daily limits"
+            android:theme="@style/Theme.FocusLock" />
+
         <service
             android:name=".blocker.FocusAccessibilityService"
             android:exported="false"

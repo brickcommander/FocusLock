@@ -7,6 +7,8 @@ import dev.focuslock.blocker.BlockList
 import dev.focuslock.blocker.BlockListEditor
 import dev.focuslock.blocker.EditResult
 import dev.focuslock.lock.LockStateStoreContract
+import dev.focuslock.lock.isBlocking
+import dev.focuslock.pin.SystemClock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,7 +40,7 @@ class BlockListViewModel(
         val rules = editor.rules
         _uiState.update {
             it.copy(
-                isLocked = lockStore.isLocked,
+                isLocked = lockStore.isBlocking(SystemClock.nowMs()),
                 apps = rules.apps
                     .map { pkg -> AppEntry(pkg, appSource.label(pkg) ?: pkg) }
                     .sortedBy { app -> app.label.lowercase() },
@@ -83,7 +85,7 @@ class BlockListViewModel(
 
     private fun EditResult.message(kind: Kind): String? = when (this) {
         EditResult.OK -> null
-        EditResult.LOCKED -> "Unlock first to change the block list"
+        EditResult.LOCKED -> "Unlock first to change the block list (not possible during a focus session)"
         EditResult.INVALID -> when (kind) {
             Kind.APP -> "That isn't a package name (example: com.zhiliaoapp.musically)"
             Kind.SITE -> "That isn't a website (example: tiktok.com)"

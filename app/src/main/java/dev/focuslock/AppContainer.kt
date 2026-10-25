@@ -4,6 +4,9 @@ import android.content.Context
 import dev.focuslock.apps.InstalledApps
 import dev.focuslock.blocker.BlockListEditor
 import dev.focuslock.blocker.BlockRulesStore
+import dev.focuslock.limits.DailyLimits
+import dev.focuslock.limits.LimitsStore
+import dev.focuslock.limits.UsageStore
 import dev.focuslock.lock.LockManager
 import dev.focuslock.lock.LockStateStore
 import dev.focuslock.pin.PinHasher
@@ -21,4 +24,7 @@ class AppContainer(context: Context) {
     val pinManager: PinManager = PinManager(PinStore(context), PinHasher(), SystemClock)
     val setupChecker: AndroidSetupChecker = AndroidSetupChecker(context)
     val lockManager: LockManager = LockManager(lockStateStore, pinManager, setupChecker, SystemClock)
+    val limitsStore: LimitsStore = LimitsStore(context)
+    val dailyLimits: DailyLimits =
+        DailyLimits(limitsStore, UsageStore(context), SystemClock, isBlocking = lockManager::isBlocking)
 }

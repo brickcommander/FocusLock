@@ -159,6 +159,29 @@ class PinManagerTest {
     }
 
     @Test
+    fun `empty code is refused without hashing or using an attempt`() = runTest {
+        manager.setPin("test482916")
+
+        assertEquals(VerifyResult.Empty, manager.verify(""))
+        assertEquals(0, store.failedAttempts)
+        assertEquals(VerifyResult.Wrong(remaining = 4), manager.verify("wrong00000"))
+    }
+
+    @Test
+    fun `a code set under the old 6 digit rule still verifies`() = runTest {
+        val hasher = PinHasher(iterations = 1_000)
+        val salt = hasher.newSalt()
+        val hash = hasher.hash("123456".toCharArray(), salt)
+        store.saveCredential(
+            saltB64 = java.util.Base64.getEncoder().encodeToString(salt),
+            hashB64 = java.util.Base64.getEncoder().encodeToString(hash),
+            iterations = 1_000,
+        )
+
+        assertEquals(VerifyResult.Ok, manager.verify("123456"))
+    }
+
+    @Test
     fun `verify returns NotSet when no code exists`() = runTest {
         assertEquals(VerifyResult.NotSet, manager.verify("test482916"))
     }
