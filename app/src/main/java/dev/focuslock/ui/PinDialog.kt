@@ -89,7 +89,7 @@ fun PinDialog(
 private val timeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
 
-private fun PinMessage.toText(): String = when (this) {
+internal fun PinMessage.toText(): String = when (this) {
     is PinMessage.Wrong -> "Wrong code, $remaining ${if (remaining == 1) "try" else "tries"} left"
     is PinMessage.LockedOut -> "Locked out until ${timeFormatter.format(Instant.ofEpochMilli(untilMs))}"
     PinMessage.InvalidFormat -> "Code must be ${PinManager.MIN_LENGTH}–${PinManager.MAX_LENGTH} digits"

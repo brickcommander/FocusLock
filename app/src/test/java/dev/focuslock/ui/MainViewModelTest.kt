@@ -35,8 +35,10 @@ class MainViewModelTest {
         store = FakeLockStateStore()
         setup = FakeSetupChecker()
         pinManager = PinManager(InMemoryPinStore(), PinHasher(iterations = 1_000), FakeClock(), dispatcher)
-        lockManager = LockManager(store, pinManager, setup, FakeClock())
+        lockManager = LockManager(store, pinManager, setup, clock)
     }
+
+    private val clock = FakeClock()
 
     @After
     fun tearDown() {
@@ -244,6 +246,59 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `break with correct code shows when blocking resumes`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        vm.openBreakDialog()
+        vm.submitBreak(PIN, hours = 2)
+
+        val state = vm.uiState.value
+        assertFalse(state.showBreakDialog)
+        assertEquals(clock.now + 2 * HOUR_MS, state.breakUntilMs)
+        assertTrue(state.isLocked)
+    }
+
+    @Test
+    fun `break with wrong code shows remaining tries and starts nothing`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        vm.openBreakDialog()
+        vm.submitBreak("000000", hours = 2)
+
+        val state = vm.uiState.value
+        assertTrue(state.showBreakDialog)
+        assertEquals(PinMessage.Wrong(remaining = 4), state.pinMessage)
+        assertNull(state.breakUntilMs)
+    }
+
+    @Test
+    fun `break disappears from the screen once it is over`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+        vm.submitBreak(PIN, hours = 1)
+
+        clock.advance(HOUR_MS)
+        vm.refresh()
+
+        assertNull(vm.uiState.value.breakUntilMs)
+        assertTrue(vm.uiState.value.isLocked)
+    }
+
+    @Test
+    fun `ending a break early removes it`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+        vm.submitBreak(PIN, hours = 4)
+
+        vm.endBreak()
+
+        assertNull(vm.uiState.value.breakUntilMs)
+        assertTrue(vm.uiState.value.isLocked)
+    }
+
+    @Test
     fun `dev force unlock clears the locked state`() {
         val vm = createViewModelWithPin()
         vm.lock()
@@ -255,5 +310,6 @@ class MainViewModelTest {
 
     private companion object {
         const val PIN = "482916"
+        const val HOUR_MS = 60 * 60 * 1000L
     }
 }

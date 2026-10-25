@@ -2,6 +2,7 @@ package dev.focuslock.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.focuslock.lock.BreakResult
 import dev.focuslock.lock.LockManager
 import dev.focuslock.lock.LockRefusal
 import dev.focuslock.lock.LockResult
@@ -38,6 +39,9 @@ data class MainUiState(
     val infoMessage: String? = null,
     val showRemoveConfirm: Boolean = false,
     val uninstallRequested: Boolean = false,
+    val showBreakDialog: Boolean = false,
+    /** End of the break that is active right now, else null. */
+    val breakUntilMs: Long? = null,
 ) {
     val isPinSet: Boolean get() = setup.pinSet
 
@@ -64,6 +68,7 @@ class MainViewModel(
                 setup = lockManager.setupStatus(),
                 isLocked = lockStateStore.isLocked,
                 lastAppliedMs = lockStateStore.lastAppliedEpochMs,
+                breakUntilMs = lockManager.activeBreak()?.untilMs,
             )
         }
     }
@@ -124,6 +129,39 @@ class MainViewModel(
                 },
             )
         }
+    }
+
+    fun openBreakDialog() {
+        _uiState.update { it.copy(showBreakDialog = true, pinMessage = null) }
+    }
+
+    fun dismissBreakDialog() {
+        if (_uiState.value.isBusy) return
+        _uiState.update { it.copy(showBreakDialog = false, pinMessage = null) }
+    }
+
+    fun submitBreak(pin: String, hours: Int) {
+        runBusy {
+            when (val result = lockManager.startBreak(pin, hours)) {
+                is BreakResult.Started -> {
+                    _uiState.update { it.copy(showBreakDialog = false, pinMessage = null, infoMessage = null) }
+                    refresh()
+                }
+                BreakResult.NotLocked -> {
+                    _uiState.update { it.copy(showBreakDialog = false, infoMessage = "Nothing is blocked right now") }
+                    refresh()
+                }
+                BreakResult.InvalidHours -> _uiState.update {
+                    it.copy(infoMessage = "Choose ${LockManager.BREAK_HOURS.first}–${LockManager.BREAK_HOURS.last} hours")
+                }
+                is BreakResult.Refused -> showPinMessage(result.reason.toPinMessage())
+            }
+        }
+    }
+
+    fun endBreak() {
+        lockManager.endBreak()
+        refresh()
     }
 
     fun requestRemoveCompletely() {

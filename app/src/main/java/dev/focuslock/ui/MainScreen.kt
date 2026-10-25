@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.focuslock.BuildConfig
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -115,6 +116,28 @@ fun MainScreen(
                 }
             }
 
+            val breakUntil = state.breakUntilMs
+            if (breakUntil != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "☕ On a break until ${timeFormatter.format(Instant.ofEpochMilli(breakUntil))}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                OutlinedButton(onClick = viewModel::endBreak) {
+                    Text("End break now")
+                }
+                LaunchedEffect(breakUntil) {
+                    delay((breakUntil - System.currentTimeMillis()).coerceAtLeast(0L))
+                    viewModel.refresh()
+                }
+            } else if (state.isLocked) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = viewModel::openBreakDialog) {
+                    Text("Take a break")
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(onClick = onOpenBlockList) {
                 Text(if (state.isLocked) "View block list" else "Edit block list")
@@ -190,6 +213,15 @@ fun MainScreen(
             onDismiss = viewModel::dismissPinDialog,
         )
         null -> Unit
+    }
+
+    if (state.showBreakDialog) {
+        BreakDialog(
+            message = state.pinMessage,
+            isBusy = state.isBusy,
+            onSubmit = viewModel::submitBreak,
+            onDismiss = viewModel::dismissBreakDialog,
+        )
     }
 
     if (state.showRemoveConfirm) {

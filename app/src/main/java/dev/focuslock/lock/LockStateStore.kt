@@ -2,14 +2,18 @@ package dev.focuslock.lock
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import java.util.concurrent.CopyOnWriteArraySet
 
 interface LockStateStoreContract {
     var isLocked: Boolean
     var lastAppliedEpochMs: Long
+    var breakWindow: BreakWindow?
 
     fun addListener(listener: (Boolean) -> Unit)
     fun removeListener(listener: (Boolean) -> Unit)
+    fun addBreakListener(listener: (BreakWindow?) -> Unit)
+    fun removeBreakListener(listener: (BreakWindow?) -> Unit)
 }
 
 class LockStateStore(context: Context) : LockStateStoreContract {
@@ -18,12 +22,19 @@ class LockStateStore(context: Context) : LockStateStoreContract {
         context.getSharedPreferences("focus_lock_state", Context.MODE_PRIVATE)
 
     private val listeners = CopyOnWriteArraySet<(Boolean) -> Unit>()
+    private val breakListeners = CopyOnWriteArraySet<(BreakWindow?) -> Unit>()
 
     // SharedPreferences only holds listeners weakly, so this field keeps it alive.
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-        if (key == KEY_LOCKED) {
-            val locked = prefs.getBoolean(KEY_LOCKED, false)
-            listeners.forEach { it(locked) }
+        when (key) {
+            KEY_LOCKED -> {
+                val locked = prefs.getBoolean(KEY_LOCKED, false)
+                listeners.forEach { it(locked) }
+            }
+            KEY_BREAK_START, KEY_BREAK_UNTIL -> {
+                val window = breakWindow
+                breakListeners.forEach { it(window) }
+            }
         }
     }
 
@@ -39,6 +50,23 @@ class LockStateStore(context: Context) : LockStateStoreContract {
         get() = prefs.getLong(KEY_LAST_APPLIED, 0L)
         set(value) { prefs.edit().putLong(KEY_LAST_APPLIED, value).apply() }
 
+    override var breakWindow: BreakWindow?
+        get() {
+            val until = prefs.getLong(KEY_BREAK_UNTIL, 0L)
+            return if (until > 0L) BreakWindow(prefs.getLong(KEY_BREAK_START, 0L), until) else null
+        }
+        set(value) {
+            prefs.edit {
+                if (value == null) {
+                    remove(KEY_BREAK_START)
+                    remove(KEY_BREAK_UNTIL)
+                } else {
+                    putLong(KEY_BREAK_START, value.startMs)
+                    putLong(KEY_BREAK_UNTIL, value.untilMs)
+                }
+            }
+        }
+
     override fun addListener(listener: (Boolean) -> Unit) {
         listeners.add(listener)
     }
@@ -47,8 +75,18 @@ class LockStateStore(context: Context) : LockStateStoreContract {
         listeners.remove(listener)
     }
 
+    override fun addBreakListener(listener: (BreakWindow?) -> Unit) {
+        breakListeners.add(listener)
+    }
+
+    override fun removeBreakListener(listener: (BreakWindow?) -> Unit) {
+        breakListeners.remove(listener)
+    }
+
     companion object {
         private const val KEY_LOCKED = "is_locked"
         private const val KEY_LAST_APPLIED = "last_applied_epoch_ms"
+        private const val KEY_BREAK_START = "break_start_epoch_ms"
+        private const val KEY_BREAK_UNTIL = "break_until_epoch_ms"
     }
 }

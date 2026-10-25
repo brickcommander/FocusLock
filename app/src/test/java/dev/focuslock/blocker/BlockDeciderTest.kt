@@ -182,6 +182,28 @@ class BlockDeciderTest {
     }
 
     @Test
+    fun `on a break blocked apps and sites are allowed`() {
+        val app = decider.decide(event("com.instagram.android"), isLocked = true, isOnBreak = true)
+        val site = decider.decide(event(BlockList.CHROME, url = "youtube.com"), isLocked = true, isOnBreak = true)
+
+        assertEquals(Decision.Allow, app)
+        assertEquals(Decision.Allow, site)
+    }
+
+    @Test
+    fun `on a break the settings guard still blocks`() {
+        val decision = decider.decide(event(SETTINGS, texts = APP_INFO_TEXTS), isLocked = true, isOnBreak = true)
+
+        assertEquals(Decision.BlockSettings, decision)
+    }
+
+    @Test
+    fun `on a break the url bar is not read`() {
+        assertFalse(decider.needsUrlBar(BlockList.CHROME, isLocked = true, isOnBreak = true))
+        assertTrue(decider.needsScreenTexts(SETTINGS, isLocked = true))
+    }
+
+    @Test
     fun `unknown package is allowed`() {
         val decision = decider.decide(event("com.example.notes"), isLocked = true)
 

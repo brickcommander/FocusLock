@@ -149,6 +149,88 @@ class LockManagerTest {
     }
 
     @Test
+    fun `startBreak with correct pin opens a window of the chosen hours and stays locked`() = runTest {
+        manager.lock()
+        clock.now = 10_000L
+
+        val result = manager.startBreak(PIN, hours = 3)
+
+        val expected = BreakWindow(startMs = 10_000L, untilMs = 10_000L + 3 * HOUR_MS)
+        assertEquals(BreakResult.Started(expected), result)
+        assertEquals(expected, store.breakWindow)
+        assertTrue(store.isLocked)
+        assertEquals(expected, manager.activeBreak())
+    }
+
+    @Test
+    fun `startBreak with wrong pin starts nothing`() = runTest {
+        manager.lock()
+
+        val result = manager.startBreak("000000", hours = 2)
+
+        assertEquals(BreakResult.Refused(VerifyResult.Wrong(remaining = 4)), result)
+        assertEquals(null, store.breakWindow)
+    }
+
+    @Test
+    fun `startBreak is refused when not locked`() = runTest {
+        val result = manager.startBreak(PIN, hours = 2)
+
+        assertEquals(BreakResult.NotLocked, result)
+        assertEquals(null, store.breakWindow)
+    }
+
+    @Test
+    fun `startBreak rejects hours outside the allowed range`() = runTest {
+        manager.lock()
+
+        assertEquals(BreakResult.InvalidHours, manager.startBreak(PIN, hours = 0))
+        assertEquals(BreakResult.InvalidHours, manager.startBreak(PIN, hours = 13))
+        assertEquals(null, store.breakWindow)
+    }
+
+    @Test
+    fun `break is no longer active after it ends`() = runTest {
+        manager.lock()
+        clock.now = 0L
+        manager.startBreak(PIN, hours = 1)
+
+        clock.now = HOUR_MS
+
+        assertEquals(null, manager.activeBreak())
+    }
+
+    @Test
+    fun `endBreak clears the break without a code`() = runTest {
+        manager.lock()
+        manager.startBreak(PIN, hours = 1)
+
+        manager.endBreak()
+
+        assertEquals(null, store.breakWindow)
+        assertTrue(store.isLocked)
+    }
+
+    @Test
+    fun `locking again clears an old break`() {
+        store.breakWindow = BreakWindow(startMs = 0L, untilMs = Long.MAX_VALUE)
+
+        manager.lock()
+
+        assertEquals(null, store.breakWindow)
+    }
+
+    @Test
+    fun `unlock clears the break`() = runTest {
+        manager.lock()
+        manager.startBreak(PIN, hours = 1)
+
+        manager.unlock(PIN)
+
+        assertEquals(null, store.breakWindow)
+    }
+
+    @Test
     fun `devForceUnlock clears isLocked without pin`() {
         manager.lock()
 
@@ -159,5 +241,6 @@ class LockManagerTest {
 
     private companion object {
         const val PIN = "482916"
+        const val HOUR_MS = 60 * 60 * 1000L
     }
 }

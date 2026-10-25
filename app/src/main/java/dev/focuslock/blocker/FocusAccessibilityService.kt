@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import dev.focuslock.BuildConfig
 import dev.focuslock.FocusApp
+import dev.focuslock.lock.BreakWindow
 import dev.focuslock.lock.LockStateStoreContract
 import dev.focuslock.pin.SystemClock
 
@@ -42,7 +43,12 @@ class FocusAccessibilityService : AccessibilityService() {
     @Volatile
     private var rules = BlockRules.DEFAULT
 
+    @Volatile
+    private var breakWindow: BreakWindow? = null
+
     private val lockListener: (Boolean) -> Unit = { locked -> isLocked = locked }
+
+    private val breakListener: (BreakWindow?) -> Unit = { window -> breakWindow = window }
 
     private val rulesListener: (BlockRules) -> Unit = { newRules ->
         rules = newRules
@@ -59,6 +65,8 @@ class FocusAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         isLocked = store.isLocked
         store.addListener(lockListener)
+        breakWindow = store.breakWindow
+        store.addBreakListener(breakListener)
         rules = rulesStore.rules
         rulesStore.addListener(rulesListener)
         updatePackageFilter(rules)
@@ -75,7 +83,9 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun handle(pkg: String, isWindowStateChange: Boolean = true) {
         val locked = isLocked
-        val urlBarText = if (decider.needsUrlBar(pkg, locked)) BrowserUrlReader.read(rootInActiveWindow, pkg) else null
+        val onBreak = breakWindow?.isActive(SystemClock.nowMs()) == true
+        val urlBarText =
+            if (decider.needsUrlBar(pkg, locked, onBreak)) BrowserUrlReader.read(rootInActiveWindow, pkg) else null
         val screenTexts =
             if (decider.needsScreenTexts(pkg, locked) && scanThrottle.shouldScan(isWindowStateChange)) {
                 ScreenTextReader.read(rootInActiveWindow)
@@ -84,7 +94,7 @@ class FocusAccessibilityService : AccessibilityService() {
             }
         if (screenTexts.isNotEmpty()) debugLog { "settings texts=$screenTexts" }
         val screenEvent = ScreenEvent(packageName = pkg, urlBarText = urlBarText, screenTexts = screenTexts)
-        val decision = decider.decide(screenEvent, locked, rules)
+        val decision = decider.decide(screenEvent, locked, rules, onBreak)
         if (throttle.shouldFire(decision)) execute(decision)
     }
 
@@ -120,6 +130,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun removeListeners() {
         store.removeListener(lockListener)
+        store.removeBreakListener(breakListener)
         rulesStore.removeListener(rulesListener)
     }
 
