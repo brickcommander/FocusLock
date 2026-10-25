@@ -13,14 +13,14 @@ Unlike intrusive distraction blockers that drain your battery with background VP
 
 ---
 
-## 👨‍💻 Built by Pawan — Senior Software Engineer
+## 👨‍💻 Built by Pawan — Senior Software & Backend Engineer
 
-Hi there! 👋 I'm **Pawan**, a Senior Software Engineer passionate about crafting high-performance mobile systems, clean software architecture, and privacy-first digital tools.
+Hi there! 👋 I'm **Pawan**, a Senior Software & Backend Engineer passionate about crafting high-performance mobile systems, scalable backend architectures, clean software design, and privacy-first digital tools.
 
 I designed and built **FocusLock** out of a personal need for a zero-battery-drain, tamper-proof tool to eliminate mindless scrolling and reclaim deep focus—without paywalls, ad tracking, or invasive VPNs.
 
 ### 🌐 Let's Connect & Collaborate
-I am always enthusiastic about connecting with developers, tech leads, founders, and creators across all domains! Whether you want to discuss software engineering, give feedback on FocusLock, or explore new opportunities, feel free to reach out:
+I am always enthusiastic about connecting with developers, tech leads, founders, and creators across all domains! Whether you want to discuss backend/mobile engineering, give feedback on FocusLock, or explore new opportunities, feel free to reach out:
 
 - ✉️ **Email**: [pawanlive2000@gmail.com](mailto:pawanlive2000@gmail.com)
 - 📞 **Phone / WhatsApp**: [+91 9617466846](tel:+919617466846)
@@ -132,6 +132,9 @@ Because FocusLock prevents unauthorized uninstallation while locked, use the bui
 ---
 
 ## ❓ Frequently Asked Questions (FAQ)
+
+### Q: How much battery does FocusLock consume? Is the battery usage minimal?
+**A:** FocusLock's battery usage is **virtually zero (0% battery drain)**. Unlike traditional app blockers that run continuous background services, polling timers, or local VPNs that keep your phone's CPU awake, FocusLock uses an event-driven architecture powered by Android's native Accessibility API. It stays completely dormant and consumes **0 CPU cycles** until a watched app or browser window opens. All blocking decisions take less than 1 millisecond in memory, making battery consumption completely imperceptible on your device.
 
 ### Q: Is FocusLock completely free? Are there any hidden subscriptions?
 **A:** Yes, FocusLock is 100% free and open-source. There are no paid tiers, ads, tracking, or monthly subscriptions.
