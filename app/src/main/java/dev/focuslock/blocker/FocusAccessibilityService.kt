@@ -61,7 +61,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun handle(pkg: String, isWindowStateChange: Boolean = true) {
         val locked = isLocked
-        val urlBarText = if (decider.needsUrlBar(pkg, locked)) ChromeUrlReader.read(rootInActiveWindow) else null
+        val urlBarText = if (decider.needsUrlBar(pkg, locked)) BrowserUrlReader.read(rootInActiveWindow, pkg) else null
         val screenTexts =
             if (decider.needsScreenTexts(pkg, locked) && scanThrottle.shouldScan(isWindowStateChange)) {
                 ScreenTextReader.read(rootInActiveWindow)

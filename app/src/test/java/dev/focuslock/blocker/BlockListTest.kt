@@ -1,5 +1,6 @@
 package dev.focuslock.blocker
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -18,9 +19,14 @@ class BlockListTest {
     }
 
     @Test
-    fun `settings and chrome are not blocked as apps`() {
-        val pagesOnly = BlockList.settingsPackages + BlockList.CHROME
+    fun `settings and browsers are not blocked as apps`() {
+        val pagesOnly = BlockList.settingsPackages + BlockList.browsers.keys
 
         assertTrue((BlockList.apps intersect pagesOnly).isEmpty())
+    }
+
+    @Test
+    fun `brave is a browser with its spiked url bar id`() {
+        assertEquals(listOf("com.brave.browser:id/url_bar"), BlockList.browsers[BlockList.BRAVE])
     }
 }

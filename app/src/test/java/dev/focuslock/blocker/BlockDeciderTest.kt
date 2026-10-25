@@ -75,6 +75,26 @@ class BlockDeciderTest {
     }
 
     @Test
+    fun `brave app itself is allowed when locked`() {
+        val decision = decider.decide(event(BlockList.BRAVE, url = "google.com"), isLocked = true)
+
+        assertEquals(Decision.Allow, decision)
+    }
+
+    @Test
+    fun `brave with blocked host is BlockSite`() {
+        val decision = decider.decide(event(BlockList.BRAVE, url = "m.youtube.com"), isLocked = true)
+
+        assertEquals(Decision.BlockSite("m.youtube.com"), decision)
+    }
+
+    @Test
+    fun `brave url bar is read only when locked`() {
+        assertTrue(decider.needsUrlBar(BlockList.BRAVE, isLocked = true))
+        assertFalse(decider.needsUrlBar(BlockList.BRAVE, isLocked = false))
+    }
+
+    @Test
     fun `dangerous settings screen is BlockSettings when locked`() {
         val decision = decider.decide(event(SETTINGS, texts = APP_INFO_TEXTS), isLocked = true)
 

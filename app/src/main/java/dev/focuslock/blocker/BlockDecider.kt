@@ -3,7 +3,7 @@ package dev.focuslock.blocker
 class BlockDecider(private val settingsGuard: SettingsGuard) {
 
     /** Reading the URL bar costs IPC, so only do it when the answer can matter. */
-    fun needsUrlBar(pkg: String, isLocked: Boolean): Boolean = isLocked && pkg == BlockList.CHROME
+    fun needsUrlBar(pkg: String, isLocked: Boolean): Boolean = isLocked && pkg in BlockList.browsers
 
     /** Collecting Settings texts walks the view tree, so only do it when the answer can matter. */
     fun needsScreenTexts(pkg: String, isLocked: Boolean): Boolean = isLocked && pkg in BlockList.settingsPackages
@@ -15,7 +15,7 @@ class BlockDecider(private val settingsGuard: SettingsGuard) {
         if (pkg in BlockList.neverBlock) return Decision.Allow
         if (pkg in BlockList.apps) return Decision.BlockApp(pkg)
 
-        if (pkg == BlockList.CHROME) {
+        if (pkg in BlockList.browsers) {
             val host = event.urlBarText?.let(HostMatcher::extractHost)
             if (host != null && HostMatcher.isBlockedHost(host)) return Decision.BlockSite(host)
         }
