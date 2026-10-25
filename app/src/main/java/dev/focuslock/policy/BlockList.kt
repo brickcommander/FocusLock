@@ -7,7 +7,7 @@ object BlockList {
     const val SELF = "dev.focuslock"
     const val CHROME = "com.android.chrome"
 
-    val sites: List<String> = listOf("youtube.com", "youtu.be", "reddit.com", "redd.it", "instagram.com")
+    val sites: List<String> = listOf("m.youtube.com", "youtube.com", "youtu.be", "reddit.com", "redd.it", "instagram.com")
 
     val apps: List<String> = buildList {
         add("com.google.android.youtube")
