@@ -2,6 +2,12 @@ package dev.focuslock.blocker
 
 class BlockDecider(private val settingsGuard: SettingsGuard) {
 
+    /** Reading the URL bar costs IPC, so only do it when the answer can matter. */
+    fun needsUrlBar(pkg: String, isLocked: Boolean): Boolean = isLocked && pkg == BlockList.CHROME
+
+    /** Collecting Settings texts walks the view tree, so only do it when the answer can matter. */
+    fun needsScreenTexts(pkg: String, isLocked: Boolean): Boolean = isLocked && pkg in BlockList.settingsPackages
+
     fun decide(event: ScreenEvent, isLocked: Boolean): Decision {
         if (!isLocked) return Decision.Allow
 

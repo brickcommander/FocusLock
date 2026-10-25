@@ -26,11 +26,15 @@ import dev.focuslock.pin.SystemClock
  * 5. Test tooling: while this service is enabled, `uiautomator dump` often fails with
  *    "null root node"; toggling the service off and on via `settings put` makes the next dump work.
  *    Each dump also re-binds this service (UiAutomation suppresses other services while connected).
+ * 6. This service sees LESS than `uiautomator dump`: Settings hides sensitive controls (admin
+ *    "Deactivate" buttons, "Clear storage", "Automatic date and time") from non-tool services.
+ *    Record Settings texts from the debug log "settings texts=[...]", not from uiautomator.
  */
 class FocusAccessibilityService : AccessibilityService() {
 
     private val decider = BlockDecider(SettingsGuard())
     private val throttle = DecisionThrottle(SystemClock)
+    private val scanThrottle = ScanThrottle(SystemClock)
 
     @Volatile
     private var isLocked = false
@@ -52,13 +56,21 @@ class FocusAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val pkg = event.packageName?.toString() ?: return
         debugLog { "event pkg=$pkg type=${event.eventType} class=${event.className}" }
-        handle(pkg)
+        handle(pkg, isWindowStateChange = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
     }
 
-    private fun handle(pkg: String) {
-        val urlBarText = if (pkg == BlockList.CHROME) ChromeUrlReader.read(rootInActiveWindow) else null
-        val screenEvent = ScreenEvent(packageName = pkg, urlBarText = urlBarText, screenTexts = emptyList())
-        val decision = decider.decide(screenEvent, isLocked)
+    private fun handle(pkg: String, isWindowStateChange: Boolean = true) {
+        val locked = isLocked
+        val urlBarText = if (decider.needsUrlBar(pkg, locked)) ChromeUrlReader.read(rootInActiveWindow) else null
+        val screenTexts =
+            if (decider.needsScreenTexts(pkg, locked) && scanThrottle.shouldScan(isWindowStateChange)) {
+                ScreenTextReader.read(rootInActiveWindow)
+            } else {
+                emptyList()
+            }
+        if (screenTexts.isNotEmpty()) debugLog { "settings texts=$screenTexts" }
+        val screenEvent = ScreenEvent(packageName = pkg, urlBarText = urlBarText, screenTexts = screenTexts)
+        val decision = decider.decide(screenEvent, locked)
         if (throttle.shouldFire(decision)) execute(decision)
     }
 

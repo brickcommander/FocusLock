@@ -1,6 +1,8 @@
 package dev.focuslock.blocker
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BlockDeciderTest {
@@ -73,9 +75,52 @@ class BlockDeciderTest {
     }
 
     @Test
+    fun `dangerous settings screen is BlockSettings when locked`() {
+        val decision = decider.decide(event(SETTINGS, texts = APP_INFO_TEXTS), isLocked = true)
+
+        assertEquals(Decision.BlockSettings, decision)
+    }
+
+    @Test
+    fun `settings guard only applies to settings packages`() {
+        val decision = decider.decide(event("com.example.notes", texts = APP_INFO_TEXTS), isLocked = true)
+
+        assertEquals(Decision.Allow, decision)
+    }
+
+    @Test
+    fun `settings guard ignored when unlocked`() {
+        val decision = decider.decide(event(SETTINGS, texts = APP_INFO_TEXTS), isLocked = false)
+
+        assertEquals(Decision.Allow, decision)
+    }
+
+    @Test
+    fun `safe settings screen is allowed when locked`() {
+        val decision = decider.decide(event(SETTINGS, texts = listOf("Network & internet", "Wi‑Fi")), isLocked = true)
+
+        assertEquals(Decision.Allow, decision)
+    }
+
+    @Test
+    fun `url bar and screen texts are only read when they can matter`() {
+        assertTrue(decider.needsUrlBar(BlockList.CHROME, isLocked = true))
+        assertFalse(decider.needsUrlBar(BlockList.CHROME, isLocked = false))
+        assertFalse(decider.needsUrlBar(SETTINGS, isLocked = true))
+        assertTrue(decider.needsScreenTexts(SETTINGS, isLocked = true))
+        assertFalse(decider.needsScreenTexts(SETTINGS, isLocked = false))
+        assertFalse(decider.needsScreenTexts(BlockList.CHROME, isLocked = true))
+    }
+
+    @Test
     fun `unknown package is allowed`() {
         val decision = decider.decide(event("com.example.notes"), isLocked = true)
 
         assertEquals(Decision.Allow, decision)
+    }
+
+    private companion object {
+        const val SETTINGS = "com.android.settings"
+        val APP_INFO_TEXTS = listOf("FocusLock", "Archive", "Uninstall", "Force stop", "App info")
     }
 }

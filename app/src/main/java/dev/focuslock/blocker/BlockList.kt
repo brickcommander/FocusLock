@@ -26,6 +26,6 @@ object BlockList {
 
     val neverBlock: Set<String> = setOf(SELF, "com.android.vending")
 
-    /** Packages whose screens SettingsGuard inspects. */
+    /** Packages whose screens SettingsGuard inspects (observed on AOSP; One UI added in Step 8). */
     val settingsPackages: Set<String> = setOf("com.android.settings")
 }
