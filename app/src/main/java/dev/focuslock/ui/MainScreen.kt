@@ -1,11 +1,9 @@
 package dev.focuslock.ui
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -15,12 +13,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -28,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.focuslock.BuildConfig
-import dev.focuslock.lock.LockReport
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -37,11 +31,7 @@ private val timeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
 
 @Composable
-fun MainScreen(
-    viewModel: MainViewModel,
-    onLogBrowserSchema: () -> Unit,
-    onRequestUninstall: () -> Unit,
-) {
+fun MainScreen(viewModel: MainViewModel) {
     val state by viewModel.uiState.collectAsState()
 
     Scaffold { innerPadding ->
@@ -60,34 +50,6 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Device Owner status
-            Text(
-                text = if (state.isDeviceOwner) "Device Owner: YES" else "Device Owner: NO",
-                style = MaterialTheme.typography.headlineSmall,
-                color = if (state.isDeviceOwner) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
-            )
-
-            if (!state.isDeviceOwner) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Run this command to set Device Owner:",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "adb shell dpm set-device-owner dev.focuslock/.admin.FocusAdminReceiver",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Lock status
             Text(
                 text = if (state.isLocked) "Status: LOCKED" else "Status: UNLOCKED",
                 style = MaterialTheme.typography.titleLarge,
@@ -100,13 +62,13 @@ fun MainScreen(
 
             if (state.isLocked && state.lastAppliedMs > 0L) {
                 Text(
-                    text = "Last applied: ${timeFormatter.format(Instant.ofEpochMilli(state.lastAppliedMs))}",
+                    text = "Last locked: ${timeFormatter.format(Instant.ofEpochMilli(state.lastAppliedMs))}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            if (state.isDeviceOwner && !state.isPinSet) {
+            if (!state.isPinSet) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Hand the phone to your friend",
@@ -125,18 +87,17 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Lock / Unlock buttons
             Row {
                 Button(
                     onClick = { viewModel.lock() },
-                    enabled = state.isDeviceOwner && state.isPinSet && !state.isLocked,
+                    enabled = state.isPinSet && !state.isLocked,
                 ) {
                     Text("Lock")
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Button(
                     onClick = { viewModel.openPinDialog(PinDialogMode.UNLOCK) },
-                    enabled = state.isDeviceOwner && state.isLocked,
+                    enabled = state.isLocked,
                 ) {
                     Text("Unlock")
                 }
@@ -154,41 +115,13 @@ fun MainScreen(
                 Text(it, style = MaterialTheme.typography.bodyMedium)
             }
 
-            state.errorMessage?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-            }
-
-            if (state.isDeviceOwner && state.isPinSet) {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = viewModel::requestRemoveCompletely) {
-                    Text("Remove FocusLock completely")
-                }
-            }
-
-            // Last report
-            state.lastReport?.let { report ->
-                Spacer(modifier = Modifier.height(24.dp))
-                ReportSection(report)
-            }
-
-            if (BuildConfig.DEBUG) {
+            if (BuildConfig.DEBUG && state.isLocked) {
                 Spacer(modifier = Modifier.height(32.dp))
-                Button(onClick = onLogBrowserSchema) {
-                    Text("DEV: Log browser schema")
-                }
-            }
-
-            // DEV: Remove Device Owner
-            if (BuildConfig.DEBUG && state.isDeviceOwner) {
-                Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = { viewModel.clearDeviceOwner() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Red,
-                    ),
+                    onClick = { viewModel.devForceUnlock() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                 ) {
-                    Text("DEV: Remove Device Owner")
+                    Text("DEV: Force unlock")
                 }
             }
         }
@@ -223,105 +156,6 @@ fun MainScreen(
             onSubmit = { viewModel.submitChangePin(it[0], it[1], it[2]) },
             onDismiss = viewModel::dismissPinDialog,
         )
-        PinDialogMode.REMOVE -> PinDialog(
-            title = "Enter code to remove FocusLock",
-            fieldLabels = listOf("Code"),
-            message = state.pinMessage,
-            isBusy = state.isBusy,
-            confirmLabel = "Remove",
-            onSubmit = { viewModel.submitRemoveCompletely(it[0]) },
-            onDismiss = viewModel::dismissPinDialog,
-        )
         null -> Unit
-    }
-
-    if (state.showRemoveConfirm) {
-        AlertDialog(
-            onDismissRequest = viewModel::cancelRemoveCompletely,
-            title = { Text("Remove FocusLock completely?") },
-            text = {
-                Text("This removes all restrictions, gives up Device Owner, and then asks Android to uninstall FocusLock.")
-            },
-            confirmButton = {
-                TextButton(onClick = viewModel::confirmRemoveCompletely) { Text("Continue") }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::cancelRemoveCompletely) { Text("Cancel") }
-            },
-        )
-    }
-
-    LaunchedEffect(state.uninstallRequested) {
-        if (state.uninstallRequested) {
-            onRequestUninstall()
-            viewModel.onUninstallLaunched()
-        }
-    }
-}
-
-@Composable
-private fun ReportSection(report: LockReport) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.Start,
-    ) {
-        if (report.applied.isNotEmpty()) {
-            Text(
-                text = "Applied (${report.applied.size}):",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            report.applied.forEach { pkg ->
-                Text(
-                    text = "  • $pkg",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        if (report.browserPolicyApplied.isNotEmpty()) {
-            Text(
-                text = "Website blocklist pushed to:",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            report.browserPolicyApplied.forEach { pkg ->
-                Text(
-                    text = "  • $pkg",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        if (report.skippedNotInstalled.isNotEmpty()) {
-            Text(
-                text = "Skipped — not installed (${report.skippedNotInstalled.size}):",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            report.skippedNotInstalled.forEach { pkg ->
-                Text(
-                    text = "  • $pkg",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        if (report.failed.isNotEmpty()) {
-            Text(
-                text = "Failed (${report.failed.size}):",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-            report.failed.forEach { pkg ->
-                Text(
-                    text = "  • $pkg",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
     }
 }

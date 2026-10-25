@@ -6,7 +6,6 @@ import dev.focuslock.pin.FakeClock
 import dev.focuslock.pin.InMemoryPinStore
 import dev.focuslock.pin.PinHasher
 import dev.focuslock.pin.PinManager
-import dev.focuslock.policy.FakePolicyController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -24,7 +23,6 @@ import org.junit.Test
 class MainViewModelTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
-    private lateinit var fake: FakePolicyController
     private lateinit var store: FakeLockStateStore
     private lateinit var pinManager: PinManager
     private lateinit var lockManager: LockManager
@@ -32,10 +30,9 @@ class MainViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        fake = FakePolicyController()
         store = FakeLockStateStore()
         pinManager = PinManager(InMemoryPinStore(), PinHasher(iterations = 1_000), FakeClock(), dispatcher)
-        lockManager = LockManager(fake, store, pinManager, FakeClock())
+        lockManager = LockManager(store, pinManager, FakeClock())
     }
 
     @After
@@ -43,57 +40,32 @@ class MainViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() = MainViewModel(fake, lockManager, store, pinManager)
+    private fun createViewModel() = MainViewModel(lockManager, store, pinManager)
 
     private fun createViewModelWithPin(): MainViewModel = createViewModel().apply {
         submitSetPin(PIN, PIN)
     }
 
     @Test
-    fun `state shows isDeviceOwner true when policy returns true`() {
-        fake.deviceOwner = true
+    fun `fresh state is unlocked without a code`() {
         val vm = createViewModel()
 
-        assertTrue(vm.uiState.value.isDeviceOwner)
+        assertFalse(vm.uiState.value.isLocked)
+        assertFalse(vm.uiState.value.isPinSet)
     }
 
     @Test
-    fun `state shows isDeviceOwner false when policy returns false`() {
-        fake.deviceOwner = false
+    fun `lock without a code stays unlocked and explains why`() {
         val vm = createViewModel()
 
-        assertFalse(vm.uiState.value.isDeviceOwner)
-    }
+        vm.lock()
 
-    @Test
-    fun `clearDeviceOwner delegates to policy and updates state`() {
-        fake.deviceOwner = true
-        val vm = createViewModel()
-
-        assertTrue(vm.uiState.value.isDeviceOwner)
-
-        vm.clearDeviceOwner()
-
-        assertFalse(vm.uiState.value.isDeviceOwner)
-        assertTrue(fake.calls.contains("clearDeviceOwner"))
-    }
-
-    @Test
-    fun `refresh re-reads device owner status`() {
-        fake.deviceOwner = false
-        val vm = createViewModel()
-
-        assertFalse(vm.uiState.value.isDeviceOwner)
-
-        fake.deviceOwner = true
-        vm.refresh()
-
-        assertTrue(vm.uiState.value.isDeviceOwner)
+        assertFalse(vm.uiState.value.isLocked)
+        assertEquals("Set a code first", vm.uiState.value.infoMessage)
     }
 
     @Test
     fun `state shows isLocked after lock`() {
-        fake.deviceOwner = true
         val vm = createViewModelWithPin()
 
         vm.lock()
@@ -102,8 +74,17 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `refresh re-reads the stored lock state`() {
+        val vm = createViewModelWithPin()
+
+        store.isLocked = true
+        vm.refresh()
+
+        assertTrue(vm.uiState.value.isLocked)
+    }
+
+    @Test
     fun `state shows unlocked after unlock with correct code`() {
-        fake.deviceOwner = true
         val vm = createViewModelWithPin()
         vm.lock()
 
@@ -116,7 +97,6 @@ class MainViewModelTest {
 
     @Test
     fun `wrong unlock code shows remaining tries and stays locked`() {
-        fake.deviceOwner = true
         val vm = createViewModelWithPin()
         vm.lock()
 
@@ -130,7 +110,6 @@ class MainViewModelTest {
 
     @Test
     fun `set code with mismatched confirmation is rejected`() {
-        fake.deviceOwner = true
         val vm = createViewModel()
 
         vm.openPinDialog(PinDialogMode.SET)
@@ -142,7 +121,6 @@ class MainViewModelTest {
 
     @Test
     fun `setting a code marks pin as set`() {
-        fake.deviceOwner = true
         val vm = createViewModel()
 
         vm.openPinDialog(PinDialogMode.SET)
@@ -153,101 +131,13 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `init reapplies lock when stored state is locked`() {
-        fake.deviceOwner = true
-        createViewModelWithPin().lock()
-        fake.installedPackages.add("com.reddit.frontpage")
-
-        val vm = createViewModel()
-
-        assertTrue(fake.suspendedPackages.contains("com.reddit.frontpage"))
-        assertTrue(vm.uiState.value.lastReport!!.applied.contains("com.reddit.frontpage"))
-    }
-
-    @Test
-    fun `remove completely with correct code requests uninstall`() {
-        fake.deviceOwner = true
+    fun `dev force unlock clears the locked state`() {
         val vm = createViewModelWithPin()
         vm.lock()
 
-        vm.requestRemoveCompletely()
-        vm.confirmRemoveCompletely()
-        vm.submitRemoveCompletely(PIN)
+        vm.devForceUnlock()
 
-        assertTrue(vm.uiState.value.uninstallRequested)
-        assertFalse(vm.uiState.value.isDeviceOwner)
         assertFalse(vm.uiState.value.isLocked)
-    }
-
-    @Test
-    fun `remove completely with wrong code does not request uninstall`() {
-        fake.deviceOwner = true
-        val vm = createViewModelWithPin()
-        vm.lock()
-
-        vm.requestRemoveCompletely()
-        vm.confirmRemoveCompletely()
-        vm.submitRemoveCompletely("000000")
-
-        assertFalse(vm.uiState.value.uninstallRequested)
-        assertTrue(vm.uiState.value.isDeviceOwner)
-        assertEquals(PinMessage.Wrong(remaining = 4), vm.uiState.value.pinMessage)
-    }
-
-    @Test
-    fun `lock failure shows an error instead of crashing and keeps unlock available`() {
-        fake.deviceOwner = true
-        val vm = createViewModelWithPin()
-        fake.failingCallPrefix = "setUserRestriction"
-
-        vm.lock()
-
-        assertTrue(vm.uiState.value.errorMessage!!.contains("Fake DPM failure"))
-        assertTrue(vm.uiState.value.isLocked)
-    }
-
-    @Test
-    fun `unlock failure shows an error, closes the dialog and stays locked`() {
-        fake.deviceOwner = true
-        val vm = createViewModelWithPin()
-        vm.lock()
-        fake.failingCallPrefix = "setUninstallBlocked"
-
-        vm.openPinDialog(PinDialogMode.UNLOCK)
-        vm.submitUnlock(PIN)
-
-        assertTrue(vm.uiState.value.errorMessage!!.contains("Fake DPM failure"))
-        assertTrue(vm.uiState.value.isLocked)
-        assertNull(vm.uiState.value.pinDialog)
-        assertFalse(vm.uiState.value.isBusy)
-    }
-
-    @Test
-    fun `successful retry clears the previous error`() {
-        fake.deviceOwner = true
-        val vm = createViewModelWithPin()
-        vm.lock()
-        fake.failingCallPrefix = "setUninstallBlocked"
-        vm.submitUnlock(PIN)
-        fake.failingCallPrefix = null
-
-        vm.submitUnlock(PIN)
-
-        assertNull(vm.uiState.value.errorMessage)
-        assertFalse(vm.uiState.value.isLocked)
-    }
-
-    @Test
-    fun `reapply failure at startup shows an error instead of crashing`() {
-        fake.deviceOwner = true
-        fake.installedPackages.add("dev.focuslock.dummytarget")
-        createViewModelWithPin().lock()
-        fake.failingCallPrefix = "setAppsSuspended"
-
-        val vm = createViewModel()
-
-        assertTrue(vm.uiState.value.errorMessage!!.contains("Fake DPM failure"))
-        assertTrue(vm.uiState.value.isLocked)
     }
 
     private companion object {

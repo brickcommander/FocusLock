@@ -3,21 +3,19 @@ package dev.focuslock.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.focuslock.lock.LockManager
-import dev.focuslock.lock.LockReport
+import dev.focuslock.lock.LockResult
 import dev.focuslock.lock.LockStateStoreContract
 import dev.focuslock.lock.UnlockResult
 import dev.focuslock.pin.PinManager
 import dev.focuslock.pin.VerifyResult
 import dev.focuslock.pin.WrongPinException
-import dev.focuslock.policy.PolicyController
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class PinDialogMode { SET, UNLOCK, CHANGE, REMOVE }
+enum class PinDialogMode { SET, UNLOCK, CHANGE }
 
 sealed class PinMessage {
     data class Wrong(val remaining: Int) : PinMessage()
@@ -29,22 +27,16 @@ sealed class PinMessage {
 }
 
 data class MainUiState(
-    val isDeviceOwner: Boolean = false,
     val isLocked: Boolean = false,
     val isPinSet: Boolean = false,
     val lastAppliedMs: Long = 0L,
-    val lastReport: LockReport? = null,
     val pinDialog: PinDialogMode? = null,
     val pinMessage: PinMessage? = null,
     val isBusy: Boolean = false,
     val infoMessage: String? = null,
-    val errorMessage: String? = null,
-    val showRemoveConfirm: Boolean = false,
-    val uninstallRequested: Boolean = false,
 )
 
 class MainViewModel(
-    private val policyController: PolicyController,
     private val lockManager: LockManager,
     private val lockStateStore: LockStateStoreContract,
     private val pinManager: PinManager,
@@ -54,24 +46,12 @@ class MainViewModel(
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     init {
-        reconcile()
-    }
-
-    /** Re-applies the lock if something drifted (e.g. a blocked app was installed), then refreshes. */
-    fun reconcile() {
-        guardPolicy {
-            val report = lockManager.reapplyIfLocked()
-            if (report != null) {
-                _uiState.update { it.copy(lastReport = report) }
-            }
-        }
         refresh()
     }
 
     fun refresh() {
         _uiState.update {
             it.copy(
-                isDeviceOwner = policyController.isDeviceOwner(),
                 isLocked = lockStateStore.isLocked,
                 isPinSet = pinManager.isSet(),
                 lastAppliedMs = lockStateStore.lastAppliedEpochMs,
@@ -80,10 +60,11 @@ class MainViewModel(
     }
 
     fun lock() {
-        guardPolicy {
-            val report = lockManager.lock()
-            _uiState.update { it.copy(lastReport = report, infoMessage = null) }
+        val info = when (lockManager.lock()) {
+            LockResult.Locked -> null
+            is LockResult.Refused -> "Set a code first"
         }
+        _uiState.update { it.copy(infoMessage = info) }
         refresh()
     }
 
@@ -111,14 +92,9 @@ class MainViewModel(
 
     fun submitUnlock(pin: String) {
         runBusy {
-            guardPolicy {
-                when (val result = lockManager.unlock(pin)) {
-                    is UnlockResult.Unlocked -> {
-                        _uiState.update { it.copy(isLocked = lockStateStore.isLocked, lastReport = result.report) }
-                        closeDialog(info = null)
-                    }
-                    is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
-                }
+            when (val result = lockManager.unlock(pin)) {
+                UnlockResult.Unlocked -> closeDialog(info = null)
+                is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
             }
         }
     }
@@ -138,54 +114,9 @@ class MainViewModel(
         }
     }
 
-    fun requestRemoveCompletely() {
-        _uiState.update { it.copy(showRemoveConfirm = true) }
-    }
-
-    fun cancelRemoveCompletely() {
-        _uiState.update { it.copy(showRemoveConfirm = false) }
-    }
-
-    fun confirmRemoveCompletely() {
-        _uiState.update { it.copy(showRemoveConfirm = false, pinDialog = PinDialogMode.REMOVE, pinMessage = null) }
-    }
-
-    fun submitRemoveCompletely(pin: String) {
-        runBusy {
-            guardPolicy {
-                when (val result = lockManager.removeCompletely(pin)) {
-                    is UnlockResult.Unlocked -> {
-                        _uiState.update { it.copy(lastReport = result.report, uninstallRequested = true) }
-                        closeDialog(info = "All restrictions removed. Confirm the uninstall.")
-                    }
-                    is UnlockResult.Refused -> showPinMessage(result.reason.toPinMessage())
-                }
-            }
-        }
-    }
-
-    fun onUninstallLaunched() {
-        _uiState.update { it.copy(uninstallRequested = false) }
-    }
-
-    fun clearDeviceOwner() {
-        guardPolicy { lockManager.devRemoveDeviceOwner() }
+    fun devForceUnlock() {
+        lockManager.devForceUnlock()
         refresh()
-    }
-
-    /** Shows a failed Device Owner call on screen instead of crashing, so Unlock stays reachable. */
-    private inline fun guardPolicy(block: () -> Unit) {
-        _uiState.update { it.copy(errorMessage = null) }
-        try {
-            block()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: RuntimeException) {
-            _uiState.update {
-                it.copy(pinDialog = null, pinMessage = null, errorMessage = "Device change failed: ${e.message}")
-            }
-            refresh()
-        }
     }
 
     private fun runBusy(block: suspend () -> Unit) {

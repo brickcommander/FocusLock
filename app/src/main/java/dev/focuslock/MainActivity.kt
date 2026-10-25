@@ -1,7 +1,5 @@
 package dev.focuslock
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,7 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import dev.focuslock.policy.BlockList
 import dev.focuslock.ui.MainScreen
 import dev.focuslock.ui.MainViewModel
 import dev.focuslock.ui.theme.FocusLockTheme
@@ -23,7 +20,6 @@ class MainActivity : ComponentActivity() {
         viewModelFactory {
             initializer {
                 MainViewModel(
-                    policyController = container.policyController,
                     lockManager = container.lockManager,
                     lockStateStore = container.lockStateStore,
                     pinManager = container.pinManager,
@@ -38,19 +34,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             FocusLockTheme {
-                MainScreen(
-                    viewModel = viewModel,
-                    onLogBrowserSchema = { container.schemaReader.logSchema(BlockList.CHROME) },
-                    onRequestUninstall = {
-                        startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName")))
-                    },
-                )
+                MainScreen(viewModel = viewModel)
             }
         }
     }
 
-    override fun onRestart() {
-        super.onRestart()
-        viewModel.reconcile()
+    override fun onResume() {
+        super.onResume()
+        viewModel.refresh()
     }
 }
