@@ -39,15 +39,29 @@ class FocusAccessibilityService : AccessibilityService() {
     @Volatile
     private var isLocked = false
 
+    @Volatile
+    private var rules = BlockRules.DEFAULT
+
     private val lockListener: (Boolean) -> Unit = { locked -> isLocked = locked }
+
+    private val rulesListener: (BlockRules) -> Unit = { newRules ->
+        rules = newRules
+        updatePackageFilter(newRules)
+    }
 
     private val store: LockStateStoreContract
         get() = (application as FocusApp).container.lockStateStore
+
+    private val rulesStore: BlockRulesStoreContract
+        get() = (application as FocusApp).container.blockRulesStore
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         isLocked = store.isLocked
         store.addListener(lockListener)
+        rules = rulesStore.rules
+        rulesStore.addListener(rulesListener)
+        updatePackageFilter(rules)
         debugLog { "connected, isLocked=$isLocked" }
         // After boot (or re-enable) a blocked app may already be in front and send no new event.
         rootInActiveWindow?.packageName?.toString()?.let(::handle)
@@ -70,7 +84,7 @@ class FocusAccessibilityService : AccessibilityService() {
             }
         if (screenTexts.isNotEmpty()) debugLog { "settings texts=$screenTexts" }
         val screenEvent = ScreenEvent(packageName = pkg, urlBarText = urlBarText, screenTexts = screenTexts)
-        val decision = decider.decide(screenEvent, locked)
+        val decision = decider.decide(screenEvent, locked, rules)
         if (throttle.shouldFire(decision)) execute(decision)
     }
 
@@ -84,16 +98,29 @@ class FocusAccessibilityService : AccessibilityService() {
         debugLog { "blocked $decision" }
     }
 
+    /** The XML packageNames are only the defaults; the user's list replaces them at runtime. */
+    private fun updatePackageFilter(rules: BlockRules) {
+        val info = serviceInfo ?: return
+        info.packageNames = BlockList.watchedPackages(rules).toTypedArray()
+        serviceInfo = info
+        debugLog { "watching ${info.packageNames.size} packages" }
+    }
+
     override fun onInterrupt() = Unit
 
     override fun onUnbind(intent: Intent?): Boolean {
-        store.removeListener(lockListener)
+        removeListeners()
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
-        store.removeListener(lockListener)
+        removeListeners()
         super.onDestroy()
+    }
+
+    private fun removeListeners() {
+        store.removeListener(lockListener)
+        rulesStore.removeListener(rulesListener)
     }
 
     private inline fun debugLog(message: () -> String) {

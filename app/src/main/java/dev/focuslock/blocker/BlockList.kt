@@ -13,6 +13,7 @@ object BlockList {
         BRAVE to listOf("com.brave.browser:id/url_bar"),
     )
 
+    /** Default apps, used until the user edits the list (BlockRulesStore). */
     val apps: Set<String> = buildSet {
         add("com.instagram.android")
         add("com.instagram.lite")
@@ -23,7 +24,7 @@ object BlockList {
         if (BuildConfig.DEBUG) add("dev.focuslock.dummytarget")
     }
 
-    /** Host suffixes. "youtube.com" also blocks "m.youtube.com", "www.youtube.com". */
+    /** Default host suffixes. "youtube.com" also blocks "m.youtube.com", "www.youtube.com". */
     val sites: Set<String> = setOf(
         "youtube.com", "youtu.be",
         "reddit.com", "redd.it",
@@ -34,4 +35,7 @@ object BlockList {
 
     /** Packages whose screens SettingsGuard inspects (observed on AOSP; One UI added in Step 8). */
     val settingsPackages: Set<String> = setOf("com.android.settings")
+
+    /** The service only receives events from these packages (set at runtime via setServiceInfo). */
+    fun watchedPackages(rules: BlockRules): Set<String> = rules.apps + browsers.keys + settingsPackages
 }

@@ -5,6 +5,17 @@
     <!-- Normal permission; required for ACTION_DELETE on our own package (targetSdk >= 28). -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
+    <!-- Package visibility (API 30+): launcher and dialer must never be added to the block list. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+    </queries>
+
     <application
         android:name=".FocusApp"
         android:allowBackup="false"

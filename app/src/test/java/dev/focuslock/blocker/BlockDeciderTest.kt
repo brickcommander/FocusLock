@@ -133,6 +133,55 @@ class BlockDeciderTest {
     }
 
     @Test
+    fun `app added by the user is blocked`() {
+        val rules = BlockRules(apps = setOf("com.zhiliaoapp.musically"), sites = emptySet())
+
+        val decision = decider.decide(event("com.zhiliaoapp.musically"), isLocked = true, rules = rules)
+
+        assertEquals(Decision.BlockApp("com.zhiliaoapp.musically"), decision)
+    }
+
+    @Test
+    fun `default app removed by the user is allowed`() {
+        val rules = BlockRules(apps = emptySet(), sites = BlockList.sites)
+
+        val decision = decider.decide(event("com.instagram.android"), isLocked = true, rules = rules)
+
+        assertEquals(Decision.Allow, decision)
+    }
+
+    @Test
+    fun `site added by the user is blocked in both browsers`() {
+        val rules = BlockRules(apps = emptySet(), sites = setOf("tiktok.com"))
+
+        val chrome = decider.decide(event(BlockList.CHROME, url = "www.tiktok.com"), isLocked = true, rules = rules)
+        val brave = decider.decide(event(BlockList.BRAVE, url = "tiktok.com"), isLocked = true, rules = rules)
+        val youtube = decider.decide(event(BlockList.CHROME, url = "youtube.com"), isLocked = true, rules = rules)
+
+        assertEquals(Decision.BlockSite("www.tiktok.com"), chrome)
+        assertEquals(Decision.BlockSite("tiktok.com"), brave)
+        assertEquals(Decision.Allow, youtube)
+    }
+
+    @Test
+    fun `browser added as an app is blocked completely`() {
+        val rules = BlockRules(apps = setOf(BlockList.BRAVE), sites = emptySet())
+
+        val decision = decider.decide(event(BlockList.BRAVE, url = "google.com"), isLocked = true, rules = rules)
+
+        assertEquals(Decision.BlockApp(BlockList.BRAVE), decision)
+    }
+
+    @Test
+    fun `self, play store and settings in the app list are never blocked as apps`() {
+        val rules = BlockRules(apps = setOf(BlockList.SELF, "com.android.vending", SETTINGS), sites = emptySet())
+
+        listOf(BlockList.SELF, "com.android.vending", SETTINGS).forEach { pkg ->
+            assertEquals(pkg, Decision.Allow, decider.decide(event(pkg), isLocked = true, rules = rules))
+        }
+    }
+
+    @Test
     fun `unknown package is allowed`() {
         val decision = decider.decide(event("com.example.notes"), isLocked = true)
 
