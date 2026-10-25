@@ -13,9 +13,9 @@ Unlike intrusive distraction blockers that drain your battery with background VP
 
 ---
 
-## 👨‍💻 Built by Pawan — Senior Software & Backend Engineer
+## 👨‍💻 Built by Pawan — Senior Software Engineer
 
-Hi there! 👋 I'm **Pawan**, a Senior Software & Backend Engineer passionate about crafting high-performance mobile systems, scalable backend architectures, clean software design, and privacy-first digital tools.
+Hi there! 👋 I'm **Pawan**, a Senior Software Engineer passionate about crafting high-performance mobile and scalable backend systems, clean software design, and privacy-first digital tools.
 
 I designed and built **FocusLock** out of a personal need for a zero-battery-drain, tamper-proof tool to eliminate mindless scrolling and reclaim deep focus—without paywalls, ad tracking, or invasive VPNs.
 
