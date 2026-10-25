@@ -177,6 +177,73 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `health banner hidden when unlocked even if service off`() {
+        setup.serviceEnabled = false
+        setup.adminActive = false
+
+        val vm = createViewModelWithPin()
+
+        assertFalse(vm.uiState.value.isLocked)
+        assertFalse(vm.uiState.value.isProtectionOff)
+    }
+
+    @Test
+    fun `remove completely with correct code unlocks and requests uninstall`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        vm.requestRemoveCompletely()
+        vm.confirmRemoveCompletely()
+        vm.submitRemoveCompletely(PIN)
+
+        val state = vm.uiState.value
+        assertFalse(state.isLocked)
+        assertFalse(state.setup.deviceAdminActive)
+        assertTrue(state.uninstallRequested)
+        assertNull(state.pinDialog)
+    }
+
+    @Test
+    fun `remove completely with wrong code keeps everything and does not request uninstall`() {
+        val vm = createViewModelWithPin()
+        vm.lock()
+
+        vm.requestRemoveCompletely()
+        vm.confirmRemoveCompletely()
+        vm.submitRemoveCompletely("000000")
+
+        val state = vm.uiState.value
+        assertTrue(state.isLocked)
+        assertEquals(0, setup.deactivateAdminCalls)
+        assertFalse(state.uninstallRequested)
+        assertEquals(PinMessage.Wrong(remaining = 4), state.pinMessage)
+        assertEquals(PinDialogMode.REMOVE, state.pinDialog)
+    }
+
+    @Test
+    fun `remove completely confirm dialog leads to the code dialog`() {
+        val vm = createViewModelWithPin()
+
+        vm.requestRemoveCompletely()
+        assertTrue(vm.uiState.value.showRemoveConfirm)
+        vm.confirmRemoveCompletely()
+
+        assertFalse(vm.uiState.value.showRemoveConfirm)
+        assertEquals(PinDialogMode.REMOVE, vm.uiState.value.pinDialog)
+    }
+
+    @Test
+    fun `uninstall request is cleared once launched`() {
+        val vm = createViewModelWithPin()
+        vm.confirmRemoveCompletely()
+        vm.submitRemoveCompletely(PIN)
+
+        vm.onUninstallLaunched()
+
+        assertFalse(vm.uiState.value.uninstallRequested)
+    }
+
+    @Test
     fun `dev force unlock clears the locked state`() {
         val vm = createViewModelWithPin()
         vm.lock()

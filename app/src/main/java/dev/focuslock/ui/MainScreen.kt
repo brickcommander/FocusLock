@@ -12,13 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -38,6 +41,7 @@ fun MainScreen(
     viewModel: MainViewModel,
     onOpenAccessibilitySettings: () -> Unit,
     onActivateDeviceAdmin: () -> Unit,
+    onRequestUninstall: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -59,6 +63,7 @@ fun MainScreen(
 
             if (state.isProtectionOff) {
                 ProtectionOffBanner(
+                    lastAppliedMs = state.lastAppliedMs,
                     onFix = if (!state.setup.blockerServiceEnabled) onOpenAccessibilitySettings else onActivateDeviceAdmin,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -85,7 +90,7 @@ fun MainScreen(
 
             if (state.isLocked && state.lastAppliedMs > 0L) {
                 Text(
-                    text = "Last locked: ${timeFormatter.format(Instant.ofEpochMilli(state.lastAppliedMs))}",
+                    text = lastLockedText(state.lastAppliedMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -119,6 +124,13 @@ fun MainScreen(
             state.infoMessage?.let {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(it, style = MaterialTheme.typography.bodyMedium)
+            }
+
+            if (state.isPinSet) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(onClick = viewModel::requestRemoveCompletely) {
+                    Text("Remove FocusLock completely")
+                }
             }
 
             if (BuildConfig.DEBUG && state.isLocked) {
@@ -162,12 +174,47 @@ fun MainScreen(
             onSubmit = { viewModel.submitChangePin(it[0], it[1], it[2]) },
             onDismiss = viewModel::dismissPinDialog,
         )
+        PinDialogMode.REMOVE -> PinDialog(
+            title = "Enter code to remove FocusLock",
+            fieldLabels = listOf("Code"),
+            message = state.pinMessage,
+            isBusy = state.isBusy,
+            confirmLabel = "Remove",
+            onSubmit = { viewModel.submitRemoveCompletely(it[0]) },
+            onDismiss = viewModel::dismissPinDialog,
+        )
         null -> Unit
+    }
+
+    if (state.showRemoveConfirm) {
+        AlertDialog(
+            onDismissRequest = viewModel::cancelRemoveCompletely,
+            title = { Text("Remove FocusLock completely?") },
+            text = {
+                Text("This removes all protection: it unlocks, turns off uninstall protection, and then asks Android to uninstall FocusLock.")
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmRemoveCompletely) { Text("Continue") }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::cancelRemoveCompletely) { Text("Cancel") }
+            },
+        )
+    }
+
+    LaunchedEffect(state.uninstallRequested) {
+        if (state.uninstallRequested) {
+            onRequestUninstall()
+            viewModel.onUninstallLaunched()
+        }
     }
 }
 
+private fun lastLockedText(epochMs: Long): String =
+    "Last locked: ${timeFormatter.format(Instant.ofEpochMilli(epochMs))}"
+
 @Composable
-private fun ProtectionOffBanner(onFix: () -> Unit) {
+private fun ProtectionOffBanner(lastAppliedMs: Long, onFix: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,6 +232,13 @@ private fun ProtectionOffBanner(onFix: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onError,
         )
+        if (lastAppliedMs > 0L) {
+            Text(
+                text = lastLockedText(lastAppliedMs),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onError,
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = onFix,

@@ -122,8 +122,10 @@ class SettingsGuardTest {
     @Test
     fun `device admin activation screen stays allowed for setup`() {
         val texts = listOf(
-            "Device admin app", "Navigate up", "FocusLock", "Stops FocusLock from being uninstalled while locked.",
+            "Activate device admin app?", "Navigate up", "FocusLock",
+            "Stops FocusLock from being uninstalled while locked.",
             "Activating this admin app will allow the app FocusLock to perform the following operations:",
+            "Activate this device admin app", "Cancel", "Uninstall app",
         )
 
         assertFalse(guard.isDangerous(texts))

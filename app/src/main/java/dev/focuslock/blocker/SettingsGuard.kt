@@ -22,8 +22,8 @@ package dev.focuslock.blocker
  * "Deactivate & uninstall", "Cancel", "Clear storage", "Clear cache", "Automatic date and time",
  * "Automatic time zone". Those needles are kept in case another Settings build shows them.
  * Notes: with the admin active, AOSP greys out Force stop, Archive and Clear storage; Uninstall
- * opens the G2 DeviceAdminAdd screen instead. The activation screen (setup) says "Activating this
- * admin app will allow…", so ACTIVE_ADMIN_TEXT keeps it allowed.
+ * opens the G2 DeviceAdminAdd screen instead. The activation screen (setup) is titled "Activate
+ * device admin app?" and says "Activating this admin app will allow…", so it stays allowed.
  *
  * One UI (S25) wordings and packages are NOT recorded yet: they need the same dump on the phone
  * (Step 8) and extra rules here. English only for now (phone language = English).

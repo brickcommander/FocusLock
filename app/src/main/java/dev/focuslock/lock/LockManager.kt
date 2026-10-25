@@ -37,6 +37,17 @@ class LockManager(
             else -> UnlockResult.Refused(result)
         }
 
+    /** Unlocks first, then gives up the admin, so a failure in between never leaves the phone locked. */
+    suspend fun removeCompletely(pin: String): UnlockResult =
+        when (val result = pinManager.verify(pin)) {
+            VerifyResult.Ok -> {
+                store.isLocked = false
+                setupChecker.deactivateAdmin()
+                UnlockResult.Unlocked
+            }
+            else -> UnlockResult.Refused(result)
+        }
+
     /** Debug safety net: unlocks without a code. Only reachable from a debug-only button. */
     fun devForceUnlock() {
         store.isLocked = false

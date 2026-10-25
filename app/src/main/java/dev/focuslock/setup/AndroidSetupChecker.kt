@@ -25,6 +25,10 @@ class AndroidSetupChecker(private val context: Context) : SetupChecker {
         )
     }
 
-    /** The only DevicePolicyManager read: plain "active admin" status, no policies. */
+    /** The only DevicePolicyManager calls: "active admin" status and self-removal, no policies. */
     override fun isDeviceAdminActive(): Boolean = dpm.isAdminActive(adminComponent)
+
+    override fun deactivateAdmin() {
+        if (isDeviceAdminActive()) dpm.removeActiveAdmin(adminComponent)
+    }
 }

@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.focuslock.ui.MainScreen
@@ -51,6 +52,9 @@ class MainActivity : ComponentActivity() {
                                     "Stops FocusLock from being uninstalled while locked.",
                                 )
                         )
+                    },
+                    onRequestUninstall = {
+                        startActivity(Intent(Intent.ACTION_DELETE, "package:$packageName".toUri()))
                     },
                 )
             }

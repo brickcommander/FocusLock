@@ -120,6 +120,35 @@ class LockManagerTest {
     }
 
     @Test
+    fun `removeCompletely with wrong pin does nothing`() = runTest {
+        manager.lock()
+
+        val result = manager.removeCompletely("000000")
+
+        assertEquals(UnlockResult.Refused(VerifyResult.Wrong(remaining = 4)), result)
+        assertTrue(store.isLocked)
+        assertEquals(0, setup.deactivateAdminCalls)
+        assertTrue(setup.adminActive)
+    }
+
+    @Test
+    fun `removeCompletely unlocks then deactivates admin`() = runTest {
+        var lockedWhenAdminDeactivated: Boolean? = null
+        val orderedSetup = FakeSetupChecker(onDeactivateAdmin = { lockedWhenAdminDeactivated = store.isLocked })
+        val pinManager = newPinManager().apply { setPin(PIN) }
+        val orderedManager = LockManager(store, pinManager, orderedSetup, clock)
+        orderedManager.lock()
+
+        val result = orderedManager.removeCompletely(PIN)
+
+        assertEquals(UnlockResult.Unlocked, result)
+        assertEquals(false, lockedWhenAdminDeactivated)
+        assertEquals(1, orderedSetup.deactivateAdminCalls)
+        assertFalse(store.isLocked)
+        assertFalse(orderedSetup.adminActive)
+    }
+
+    @Test
     fun `devForceUnlock clears isLocked without pin`() {
         manager.lock()
 
